@@ -9,6 +9,6 @@ const bookingService = {
   checkOut: (id, data) => api.patch(`/bookings/${id}/check-out`, data),
   cancel: (id) => api.patch(`/bookings/${id}/cancel`),
   addService: (id, data) => api.post(`/bookings/${id}/services`, data),
-  myBookings: () => api.get("/users/me/bookings"),
+  myBookings: (params) => api.get("/users/me/bookings", { params }),
 };
 export default bookingService;

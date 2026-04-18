@@ -12,6 +12,16 @@ import useToast from '../../../hooks/useToast';
 
 const EMPTY = { full_name:'', email:'', phone:'', password:'', role:'receptionist', position:'Nhân viên lễ tân', department:'Lễ tân', hire_date:'', salary:'', shift:'Sáng' };
 
+const normalizeEmployee = (employee = {}) => {
+  const user = employee.user || employee.User || null;
+
+  return {
+    ...employee,
+    id: employee.id ?? employee.employee_id ?? null,
+    user,
+  };
+};
+
 const EmployeesPage = () => {
   const toast = useToast();
   const [employees, setEmployees] = useState([]);
@@ -21,16 +31,36 @@ const EmployeesPage = () => {
   const [form, setForm] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
 
-  const load = async () => { setLoading(true); try { const r = await employeeService.getAll(); setEmployees(toArray(r?.data)); } catch(e){toast.error(e.message);} setLoading(false); };
+  const load = async () => {
+    setLoading(true);
+    try {
+      const r = await employeeService.getAll();
+      setEmployees(toArray(r?.data).map(normalizeEmployee));
+    } catch (e) {
+      toast.error(e.message);
+    }
+    setLoading(false);
+  };
   useEffect(()=>{load();},[]);
 
   const openCreate = () => { setSelected(null); setForm(EMPTY); setModalOpen(true); };
   const openEdit = e => {
     setSelected(e);
-    setForm({ full_name:e.User?.full_name||'', email:e.User?.email||'', phone:e.User?.phone||'', password:'', role:e.User?.role||'receptionist', position:e.position||'', department:e.department||'', hire_date:e.hire_date?.split('T')[0]||'', salary:e.salary||'', shift:e.shift||'Sáng' });
+    setForm({
+      full_name: e.user?.full_name || '',
+      email: e.user?.email || '',
+      phone: e.user?.phone || '',
+      password: '',
+      role: e.user?.role || 'receptionist',
+      position: e.position || '',
+      department: e.department || '',
+      hire_date: e.hire_date?.split('T')[0] || '',
+      salary: e.salary || '',
+      shift: e.shift || 'Sáng',
+    });
     setModalOpen(true);
   };
-
+  
   const handleChange = e => setForm(f=>({...f,[e.target.name]:e.target.value}));
 
   const handleSave = async ev => {
@@ -51,17 +81,17 @@ const EmployeesPage = () => {
   };
 
   const columns = [
-    { key:'User', title:'Họ tên', render:v=><strong>{v?.full_name}</strong> },
-    { key:'User', title:'Email', render:v=>v?.email },
-    { key:'User', title:'SĐT', render:v=>v?.phone||'—' },
+    { key:'user_name', title:'Họ tên', render:(_, row)=><strong>{row.user?.full_name || '—'}</strong> },
+    { key:'user_email', title:'Email', render:(_, row)=>row.user?.email || '—' },
+    { key:'user_phone', title:'SĐT', render:(_, row)=>row.user?.phone || '—' },
     { key:'position', title:'Chức vụ' },
     { key:'department', title:'Bộ phận' },
     { key:'shift', title:'Ca làm' },
-    { key:'User', title:'Trạng thái', render:v=><Badge label={v?.is_active?'Đang làm':'Nghỉ việc'} variant={v?.is_active?'success':'danger'} /> },
+    { key:'user_status', title:'Trạng thái', render:(_, row)=><Badge label={row.user?.is_active ? 'Đang làm' : 'Nghỉ việc'} variant={row.user?.is_active ? 'success' : 'danger'} /> },
     { key:'actions', title:'Hành động', render:(_,r)=>(
       <div style={{display:'flex',gap:6}}>
         <Button size="sm" variant="secondary" onClick={()=>openEdit(r)}>Sửa</Button>
-        <Button size="sm" variant={r.User?.is_active?'danger':'success'} onClick={()=>handleToggle(r)}>{r.User?.is_active?'Khóa':'Mở'}</Button>
+        <Button size="sm" variant={r.user?.is_active ? 'danger' : 'success'} onClick={()=>handleToggle(r)}>{r.user?.is_active ? 'Khóa' : 'Mở'}</Button>
       </div>
     )},
   ];
