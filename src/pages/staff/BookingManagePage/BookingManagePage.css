@@ -1,0 +1,434 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+/* ─── Filter Bar ─────────────────────────────────────────── */
+.booking-manage-page__filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+.bm-filter-btn { padding: 6px 14px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-full); font-size: 0.8rem; cursor: pointer; transition: all var(--transition-fast); color: var(--color-text-secondary); }
+.bm-filter-btn:hover { border-color: var(--color-primary); color: var(--color-primary); }
+.bm-filter-btn--active { background: var(--color-primary); border-color: var(--color-primary); color: white; }
+
+/* ─── Booking Detail (simple modal) ─────────────────────── */
+.booking-detail { display: flex; flex-direction: column; gap: 0; }
+.booking-detail__row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--color-border-light); font-size: 0.875rem; }
+.booking-detail__row:last-child { border-bottom: none; }
+.booking-detail__row span { color: var(--color-text-secondary); }
+.booking-detail__row strong { color: var(--color-text); }
+.booking-detail__row--total { font-size: 1rem; padding-top: 14px; }
+.booking-detail__row--total strong { color: var(--color-accent-dark); font-size: 1.1rem; }
+
+/* ═══════════════════════════════════════════════════════════
+   INVOICE MODAL — Premium Hotel Receipt Design
+   ═══════════════════════════════════════════════════════════ */
+
+/* ─── Root token overrides inside modal ─────────────────── */
+.inv-root {
+  --inv-font-display: 'Cormorant Garamond', Georgia, serif;
+  --inv-font-body:    'DM Sans', system-ui, sans-serif;
+  --inv-gold:         #9A7D3A;
+  --inv-gold-light:   #C9A84C;
+  --inv-gold-bg:      #FBF8F1;
+  --inv-ink:          #1C1C1E;
+  --inv-ink-2:        #4A4A52;
+  --inv-ink-3:        #8A8A94;
+  --inv-border:       #E8E3D8;
+  --inv-border-light: #F0EDE6;
+  --inv-surface:      #FFFFFF;
+  --inv-bg:           #F9F7F3;
+  --inv-shadow:       0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
+  font-family: var(--inv-font-body);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ─── Invoice Header ─────────────────────────────────────── */
+.inv-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding-bottom: 14px;
+  border-bottom: 2px solid var(--inv-ink);
+  gap: 12px;
+}
+
+.inv-header__brand {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.inv-header__title {
+  font-family: var(--inv-font-display);
+  font-size: 1.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--inv-ink);
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.inv-header__subtitle {
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--inv-gold);
+}
+
+.inv-header__meta {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.inv-header__id {
+  font-family: var(--inv-font-display);
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--inv-ink);
+  letter-spacing: 0.02em;
+}
+
+.inv-header__date {
+  font-size: 0.78rem;
+  color: var(--inv-ink-3);
+  letter-spacing: 0.02em;
+}
+
+/* ─── Section Card ───────────────────────────────────────── */
+.inv-card {
+  background: var(--inv-surface);
+  border: 1px solid var(--inv-border);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: var(--inv-shadow);
+}
+
+.inv-card__head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 14px;
+  background: var(--inv-bg);
+  border-bottom: 1px solid var(--inv-border);
+}
+
+.inv-card__head-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--inv-gold);
+  flex-shrink: 0;
+}
+
+.inv-card__head-label {
+  font-size: 0.67rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--inv-ink-2);
+}
+
+.inv-card__body {
+  padding: 12px 14px;
+  display: grid;
+  gap: 0;
+}
+
+/* ─── Info Rows ──────────────────────────────────────────── */
+.inv-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--inv-border-light);
+  font-size: 0.845rem;
+}
+
+.inv-row:last-child { border-bottom: none; }
+
+.inv-row__label {
+  color: var(--inv-ink-3);
+  font-weight: 400;
+  flex-shrink: 0;
+  min-width: 90px;
+}
+
+.inv-row__value {
+  color: var(--inv-ink);
+  font-weight: 500;
+  text-align: right;
+  word-break: break-word;
+}
+
+/* ─── 2-column info grid ─────────────────────────────────── */
+.inv-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 12px;
+}
+
+.inv-grid-2 .inv-row {
+  border-bottom: 1px solid var(--inv-border-light);
+}
+
+/* ─── Pricing Summary ────────────────────────────────────── */
+.inv-pricing {
+  display: grid;
+  gap: 0;
+}
+
+.inv-pricing .inv-row__label { color: var(--inv-ink-2); }
+
+.inv-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--inv-border), transparent);
+  margin: 6px 0;
+}
+
+.inv-row--total {
+  padding: 10px 0 4px;
+  border-bottom: none !important;
+}
+
+.inv-row--total .inv-row__label {
+  font-family: var(--inv-font-display);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--inv-ink);
+  letter-spacing: 0.02em;
+}
+
+.inv-row--total .inv-row__value {
+  font-family: var(--inv-font-display);
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: var(--inv-gold);
+  letter-spacing: 0.01em;
+}
+
+/* ─── Services Table ─────────────────────────────────────── */
+.inv-services-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.835rem;
+}
+
+.inv-services-table thead tr {
+  border-bottom: 1.5px solid var(--inv-border);
+}
+
+.inv-services-table th {
+  padding: 6px 0 8px;
+  font-size: 0.67rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--inv-ink-3);
+  text-align: left;
+}
+
+.inv-services-table th:not(:first-child),
+.inv-services-table td:not(:first-child) { text-align: right; }
+
+.inv-services-table tbody tr {
+  border-bottom: 1px solid var(--inv-border-light);
+  transition: background 0.15s;
+}
+
+.inv-services-table tbody tr:last-child { border-bottom: none; }
+
+.inv-services-table tbody tr:hover { background: var(--inv-bg); }
+
+.inv-services-table td {
+  padding: 8px 0;
+  color: var(--inv-ink);
+  vertical-align: middle;
+}
+
+.inv-services-table td:first-child { color: var(--inv-ink-2); }
+.inv-services-table td:last-child { font-weight: 600; color: var(--inv-ink); }
+
+/* ─── Payment Section ────────────────────────────────────── */
+.inv-payment-label {
+  font-size: 0.67rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--inv-ink-2);
+  margin-bottom: 5px;
+  display: block;
+}
+
+.inv-payment-select {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1.5px solid var(--inv-border);
+  border-radius: 8px;
+  font-family: var(--inv-font-body);
+  font-size: 0.88rem;
+  color: var(--inv-ink);
+  background: var(--inv-surface);
+  cursor: pointer;
+  transition: border-color 0.15s;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238A8A94' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
+}
+
+.inv-payment-select:focus {
+  outline: none;
+  border-color: var(--inv-gold);
+  box-shadow: 0 0 0 3px rgba(154,125,58,0.1);
+}
+
+/* ─── Bank Transfer Block ────────────────────────────────── */
+.inv-bank {
+  background: var(--inv-gold-bg);
+  border: 1px solid #E8D99A;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.inv-bank__header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 14px;
+  border-bottom: 1px solid #E8D99A;
+}
+
+.inv-bank__header-icon {
+  font-size: 0.9rem;
+}
+
+.inv-bank__header-text {
+  font-size: 0.67rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--inv-gold);
+}
+
+.inv-bank__body {
+  padding: 12px 14px;
+  display: grid;
+  gap: 0;
+}
+
+.inv-bank__qr {
+  padding: 14px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-top: 1px dashed #E8D99A;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.inv-bank__qr-label {
+  font-size: 0.72rem;
+  color: var(--inv-gold);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.inv-bank__qr img {
+  width: 200px;
+  height: 200px;
+  object-fit: contain;
+  border-radius: 10px;
+  background: #fff;
+  padding: 6px;
+  border: 1px solid #E8D99A;
+  box-shadow: 0 2px 8px rgba(154,125,58,0.12);
+}
+
+.inv-bank__qr-pending {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 0;
+  color: var(--inv-gold);
+}
+
+.inv-bank__qr-pending-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(154,125,58,0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+}
+
+.inv-bank__qr-pending-text {
+  font-size: 0.8rem;
+  color: var(--inv-ink-3);
+  text-align: center;
+}
+
+/* ─── Stamp / Watermark ──────────────────────────────────── */
+.inv-stamp-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+.inv-stamp-line {
+  flex: 1;
+  height: 1px;
+  background: var(--inv-border);
+}
+
+.inv-stamp-text {
+  font-size: 0.65rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--inv-ink-3);
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+/* ─── Loading Skeleton ───────────────────────────────────── */
+.inv-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 40px 0;
+  color: var(--inv-ink-3);
+  font-family: var(--inv-font-body);
+}
+
+.inv-loading__spinner {
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--inv-border);
+  border-top-color: var(--inv-gold);
+  border-radius: 50%;
+  animation: inv-spin 0.75s linear infinite;
+}
+
+@keyframes inv-spin { to { transform: rotate(360deg); } }
+
+.inv-loading__text {
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   PRINT STYLES (applied to print window, not modal)
+   ═══════════════════════════════════════════════════════════ */
+@media print {
+  .inv-root { gap: 12px; }
+}

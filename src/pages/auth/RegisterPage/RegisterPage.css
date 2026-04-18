@@ -1,0 +1,7 @@
+.register-page__title { font-family: var(--font-heading); font-size: 1.5rem; color: var(--color-primary); margin-bottom: 4px; }
+.register-page__sub { color: var(--color-text-muted); font-size: 0.875rem; margin-bottom: 24px; }
+.register-page__form { display: flex; flex-direction: column; gap: 14px; margin-bottom: 20px; }
+.register-page__row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.register-page__login { text-align: center; font-size: 0.875rem; color: var(--color-text-secondary); }
+.register-page__link { color: var(--color-accent); font-weight: 600; }
+@media (max-width: 480px) { .register-page__row { grid-template-columns: 1fr; } }

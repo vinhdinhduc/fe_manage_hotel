@@ -1,0 +1,36 @@
+.booking-page { min-height: calc(100vh - 130px); background: var(--color-bg); padding: 40px 24px; }
+.booking-page__inner { max-width: 1000px; margin: 0 auto; }
+.booking-page__title { font-family: var(--font-heading); font-size: 1.8rem; color: var(--color-primary); margin-bottom: 28px; }
+.booking-page__layout { display: grid; grid-template-columns: 1fr 360px; gap: 24px; align-items: start; }
+.booking-page__section-title { font-family: var(--font-heading); font-size: 1.1rem; color: var(--color-primary); margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--color-border-light); }
+.booking-page__form { display: flex; flex-direction: column; gap: 16px; }
+.booking-page__row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.bp-field { display: flex; flex-direction: column; gap: 5px; }
+.bp-field--full { grid-column: 1/-1; }
+.bp-label { font-size: 0.82rem; font-weight: 600; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.02em; }
+.bp-select { padding: 10px 14px; border: 1.5px solid var(--color-border); border-radius: var(--radius-md); font-size: 0.9rem; color: var(--color-text); background: var(--color-surface); outline: none; transition: border-color var(--transition-fast); }
+.bp-select:focus { border-color: var(--color-primary); }
+.bp-textarea { padding: 10px 14px; border: 1.5px solid var(--color-border); border-radius: var(--radius-md); font-size: 0.875rem; color: var(--color-text); resize: vertical; outline: none; font-family: var(--font-body); transition: border-color var(--transition-fast); }
+.bp-textarea:focus { border-color: var(--color-primary); }
+.booking-page__payment-method { background: var(--color-bg); border-radius: var(--radius-md); padding: 14px; }
+.booking-page__pm-options { margin-top: 8px; }
+.booking-page__pm-option { display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer; }
+.booking-page__pm-option span { display: inline-flex; align-items: center; gap: 6px; }
+.booking-page__pm-option--selected { color: var(--color-primary); font-weight: 600; }
+/* Summary */
+.booking-summary { display: flex; flex-direction: column; gap: 12px; }
+.booking-summary__room { background: var(--color-bg); border-radius: var(--radius-md); padding: 14px; }
+.booking-summary__room-number { font-family: var(--font-heading); font-size: 1.1rem; color: var(--color-primary); font-weight: 700; }
+.booking-summary__room-type { font-size: 0.875rem; color: var(--color-text-secondary); }
+.booking-summary__room-floor { font-size: 0.8rem; color: var(--color-text-muted); }
+.booking-summary__divider { border: none; border-top: 1px dashed var(--color-border); }
+.booking-summary__row { display: flex; justify-content: space-between; font-size: 0.875rem; color: var(--color-text-secondary); }
+.booking-summary__row--total { font-weight: 700; color: var(--color-text); font-size: 1rem; }
+.booking-summary__total-amount { color: var(--color-accent-dark); font-size: 1.1rem; }
+.booking-summary__note { background: var(--color-warning-bg); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 0.78rem; color: #a07000; }
+.booking-summary__note p { display: inline-flex; align-items: center; gap: 6px; }
+.booking-page__no-room { text-align: center; padding: 80px; }
+@media (max-width: 768px) {
+  .booking-page__layout { grid-template-columns: 1fr; }
+  .booking-page__row { grid-template-columns: 1fr; }
+}

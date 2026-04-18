@@ -1,0 +1,47 @@
+.room-search-page { min-height: calc(100vh - 130px); }
+
+/* Filter */
+.room-search-page__filter-bar { background: var(--color-primary); padding: 28px 0; }
+.room-search-page__filter-inner { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+.room-search-page__title { color: rgba(255,255,255,0.9); font-family: var(--font-heading); font-size: 1.4rem; margin-bottom: 16px; }
+.room-search-page__form { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+.rs-field { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 150px; }
+.rs-label { font-size: 0.7rem; font-weight: 700; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 0.05em; }
+.rs-input { padding: 9px 12px; border: 1.5px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: white; border-radius: var(--radius-md); font-size: 0.875rem; font-family: var(--font-body); outline: none; transition: border-color var(--transition-fast); }
+.rs-input:focus { border-color: var(--color-accent); }
+.rs-input option { background: var(--color-primary); color: white; }
+.rs-search-btn { flex-shrink: 0; padding: 10px 24px; background: var(--color-accent); color: white; border: none; border-radius: var(--radius-md); font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all var(--transition-fast); display: inline-flex; align-items: center; gap: 8px; }
+.rs-search-btn:hover:not(:disabled) { background: var(--color-accent-light); transform: translateY(-1px); }
+.rs-search-btn__icon { display: inline-flex; }
+.rs-search-btn__icon--spin { animation: rs-spin 1s linear infinite; }
+
+/* Results */
+.room-search-page__results { max-width: 1200px; margin: 0 auto; padding: 32px 24px; }
+.room-search-page__count { font-size: 0.875rem; color: var(--color-text-secondary); margin-bottom: 20px; }
+.room-search-page__count strong { color: var(--color-primary); }
+.room-search-page__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+
+/* Empty / Prompt */
+.room-search-page__empty, .room-search-page__prompt { text-align: center; padding: 80px 24px; color: var(--color-text-secondary); }
+.room-search-page__empty-icon, .room-search-page__prompt-icon { font-size: 3.5rem; margin-bottom: 16px; opacity: 0.6; }
+.room-search-page__empty h3, .room-search-page__prompt strong { color: var(--color-text); }
+.room-search-page__empty p { margin-top: 8px; font-size: 0.875rem; }
+
+/* Room Card */
+.room-card { background: var(--color-surface); border-radius: var(--radius-lg); border: 1px solid var(--color-border); padding: 20px; transition: all var(--transition-base); display: flex; flex-direction: column; gap: 10px; }
+.room-card:hover { box-shadow: var(--shadow-md); border-color: var(--color-primary); transform: translateY(-2px); }
+.room-card__header { display: flex; align-items: center; justify-content: space-between; }
+.room-card__number { font-family: var(--font-heading); font-size: 1.15rem; font-weight: 700; color: var(--color-primary); }
+.room-card__type { font-size: 0.85rem; color: var(--color-text-secondary); font-weight: 500; }
+.room-card__details { display: flex; gap: 12px; flex-wrap: wrap; }
+.room-card__details span { font-size: 0.8rem; color: var(--color-text-muted); display: inline-flex; align-items: center; gap: 5px; }
+.room-card__amenities { font-size: 0.78rem; color: var(--color-text-muted); line-height: 1.5; }
+.room-card__footer { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 12px; border-top: 1px solid var(--color-border-light); }
+.room-card__price { display: flex; align-items: baseline; gap: 3px; }
+.room-card__price-amount { font-size: 1.15rem; font-weight: 700; color: var(--color-accent-dark); }
+.room-card__price-unit { font-size: 0.75rem; color: var(--color-text-muted); }
+.room-card__book-btn { padding: 8px 18px; background: var(--color-primary); color: white; border: none; border-radius: var(--radius-md); font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: all var(--transition-fast); }
+.room-card__book-btn:hover:not(:disabled) { background: var(--color-primary-light); }
+.room-card__book-btn:disabled { opacity: 0.5; cursor: not-allowed; background: var(--color-text-muted); }
+
+@keyframes rs-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }

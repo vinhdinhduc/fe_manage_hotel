@@ -1,0 +1,20 @@
+.input-field { display: flex; flex-direction: column; gap: 5px; }
+.input-field__label { font-size: 0.82rem; font-weight: 600; color: var(--color-text-secondary); letter-spacing: 0.02em; text-transform: uppercase; }
+.input-field__required { color: var(--color-danger); margin-left: 2px; }
+.input-field__wrapper { position: relative; }
+.input-field__icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--color-text-muted); display: flex; pointer-events: none; }
+.input-field__right { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); }
+.input-field__control {
+  width: 100%; padding: 10px 14px; border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md); font-family: var(--font-body); font-size: 0.9rem;
+  color: var(--color-text); background: var(--color-surface);
+  transition: all var(--transition-fast); outline: none;
+}
+.input-field__control--icon { padding-left: 38px; }
+.input-field__control--right { padding-right: 44px; }
+.input-field__control:focus { border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(26,47,78,0.1); }
+.input-field__control:disabled { background: var(--color-bg-alt); cursor: not-allowed; opacity: 0.7; }
+.input-field--error .input-field__control { border-color: var(--color-danger); }
+.input-field--error .input-field__control:focus { box-shadow: 0 0 0 3px rgba(229,83,75,0.1); }
+.input-field__error { font-size: 0.78rem; color: var(--color-danger); }
+.input-field__hint { font-size: 0.78rem; color: var(--color-text-muted); }

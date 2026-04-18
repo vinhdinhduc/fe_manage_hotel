@@ -1,0 +1,5 @@
+.checkinout-page__tabs { display: flex; gap: 4px; margin-bottom: 20px; background: var(--color-bg-alt); padding: 4px; border-radius: var(--radius-md); max-width: 420px; }
+.cio-tab { flex: 1; padding: 9px 16px; background: none; border: none; border-radius: var(--radius-sm); font-size: 0.875rem; font-weight: 500; cursor: pointer; color: var(--color-text-secondary); transition: all var(--transition-fast); display: flex; align-items: center; gap: 6px; justify-content: center; }
+.cio-tab--active { background: var(--color-surface); color: var(--color-primary); font-weight: 600; box-shadow: var(--shadow-sm); }
+.cio-tab__badge { background: var(--color-primary); color: white; border-radius: 9999px; padding: 1px 7px; font-size: 0.72rem; font-weight: 700; }
+.cio-tab--active .cio-tab__badge { background: var(--color-accent); }
