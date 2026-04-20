@@ -9,6 +9,8 @@ import MainLayout from '../layouts/MainLayout/MainLayout';
 // Auth Pages
 import LoginPage from '../pages/auth/LoginPage/LoginPage';
 import RegisterPage from '../pages/auth/RegisterPage/RegisterPage';
+import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage/ForgotPasswordPage';
+import ResetPasswordPage from '../pages/auth/ResetPasswordPage/ResetPasswordPage';
 
 // Public Pages
 import PaymentQrPage from '../pages/public/PaymentQrPage/PaymentQrPage';
@@ -65,6 +67,8 @@ const router = createBrowserRouter([
     children: [
       { path: '/login', element: <PublicRoute><LoginPage /></PublicRoute> },
       { path: '/register', element: <PublicRoute><RegisterPage /></PublicRoute> },
+      { path: '/forgot-password', element: <PublicRoute><ForgotPasswordPage /></PublicRoute> },
+      { path: '/reset-password', element: <PublicRoute><ResetPasswordPage /></PublicRoute> },
     ],
   },
   // Customer routes

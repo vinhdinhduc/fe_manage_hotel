@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { FaCirclePlus } from 'react-icons/fa6';
 import serviceService from '../../../services/service.service';
 import Table from '../../../components/common/Table/Table';
+import Pagination from '../../../components/common/Pagination/Pagination';
 import Button from '../../../components/common/Button/Button';
 import Modal from '../../../components/common/Modal/Modal';
 import Input from '../../../components/common/Input/Input';
@@ -11,21 +12,40 @@ import { pickArray } from '../../../utils/apiData';
 import { formatCurrency } from '../../../utils/formatters';
 import { useAuth } from '../../../contexts/AuthContext';
 import useToast from '../../../hooks/useToast';
+import usePaginationQuery from '../../../hooks/usePaginationQuery';
 
 const EMPTY = { service_name:'', price:'', description:'' };
 
 const ServicesPage = () => {
   const toast = useToast();
   const { isAdmin } = useAuth();
+  const { page, limit, setPage, setLimit } = usePaginationQuery(1, 10);
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0, limit: 10 });
   const [modalOpen, setModalOpen] = useState(false);
   const [selected, setSelected] = useState(null);
   const [form, setForm] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
 
-  const load = async () => { setLoading(true); try { const r = await serviceService.getAll(); setServices(pickArray(r?.data, ['services'])); } catch(e){toast.error(e.message);} setLoading(false); };
-  useEffect(() => { load(); }, []);
+  const load = async () => {
+    setLoading(true);
+    try {
+      const r = await serviceService.getAll({ page, limit });
+      const rows = pickArray(r?.data, ['services']);
+      const apiPagination = r?.data?.pagination || {};
+
+      setServices(rows);
+      setPagination({
+        page: Number(apiPagination.page || page),
+        totalPages: Number(apiPagination.totalPages || 1),
+        total: Number(apiPagination.total || rows.length),
+        limit: Number(apiPagination.limit || limit),
+      });
+    } catch (e) { toast.error(e.message); }
+    setLoading(false);
+  };
+  useEffect(() => { load(); }, [page, limit]);
 
   const openCreate = () => { setSelected(null); setForm(EMPTY); setModalOpen(true); };
   const openEdit = (s) => { setSelected(s); setForm({ service_name:s.service_name, price:s.price, description:s.description||'' }); setModalOpen(true); };
@@ -74,6 +94,14 @@ const ServicesPage = () => {
       <PageHeader title="Quản lý dịch vụ" subtitle="Dịch vụ bổ sung cho khách lưu trú"
         actions={<Button variant="primary" icon={<FaCirclePlus color="#ffffff" />} onClick={openCreate}>Thêm dịch vụ</Button>} />
       <Table columns={columns} data={services} loading={loading} emptyText="Chưa có dịch vụ nào" />
+      <Pagination
+        page={pagination.page}
+        totalPages={pagination.totalPages}
+        total={pagination.total}
+        limit={pagination.limit}
+        onPageChange={setPage}
+        onLimitChange={setLimit}
+      />
       <Modal isOpen={modalOpen} onClose={()=>setModalOpen(false)} title={selected?'Sửa dịch vụ':'Thêm dịch vụ mới'} size="sm"
         footer={<><Button variant="secondary" onClick={()=>setModalOpen(false)}>Hủy</Button><Button variant="primary" loading={saving} onClick={handleSave}>Lưu</Button></>}>
         <form onSubmit={handleSave} style={{display:'flex',flexDirection:'column',gap:14}}>

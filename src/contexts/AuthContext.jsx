@@ -3,25 +3,48 @@ import authService from '../services/auth.service';
 
 const AuthContext = createContext(null);
 
+const resolveInitialStorageType = () => {
+  if (localStorage.getItem('token')) return 'local';
+  if (sessionStorage.getItem('token')) return 'session';
+  return 'local';
+};
+
+const safeParse = (value) => {
+  try {
+    return value ? JSON.parse(value) : null;
+  } catch {
+    return null;
+  }
+};
+
+const readToken = () => localStorage.getItem('token') || sessionStorage.getItem('token');
+const readUser = () => safeParse(localStorage.getItem('user')) || safeParse(sessionStorage.getItem('user'));
+
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('user')); } catch { return null; }
-  });
-  const [token, setToken] = useState(() => localStorage.getItem('token'));
+  const [storageType, setStorageType] = useState(resolveInitialStorageType);
+  const [user, setUser] = useState(readUser);
+  const [token, setToken] = useState(readToken);
   const [loading, setLoading] = useState(false);
 
-  const saveAuth = useCallback((userData, tokenData) => {
+  const saveAuth = useCallback((userData, tokenData, remember = true) => {
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    sessionStorage.removeItem('user');
+    sessionStorage.removeItem('token');
+
+    const targetStorage = remember ? localStorage : sessionStorage;
     setUser(userData);
     setToken(tokenData);
-    localStorage.setItem('user', JSON.stringify(userData));
-    localStorage.setItem('token', tokenData);
+    setStorageType(remember ? 'local' : 'session');
+    targetStorage.setItem('user', JSON.stringify(userData));
+    targetStorage.setItem('token', tokenData);
   }, []);
 
-  const login = useCallback(async (credentials) => {
+  const login = useCallback(async (credentials, remember = true) => {
     setLoading(true);
     try {
       const res = await authService.login(credentials);
-      saveAuth(res.data.user, res.data.token);
+      saveAuth(res.data.user, res.data.token, remember);
       return res.data.user;
     } finally {
       setLoading(false);
@@ -31,15 +54,19 @@ export const AuthProvider = ({ children }) => {
   const logout = useCallback(() => {
     setUser(null);
     setToken(null);
+    setStorageType('local');
     localStorage.removeItem('user');
     localStorage.removeItem('token');
+    sessionStorage.removeItem('user');
+    sessionStorage.removeItem('token');
   }, []);
 
   const updateUser = useCallback((updated) => {
     const newUser = { ...user, ...updated };
     setUser(newUser);
-    localStorage.setItem('user', JSON.stringify(newUser));
-  }, [user]);
+    const targetStorage = storageType === 'session' ? sessionStorage : localStorage;
+    targetStorage.setItem('user', JSON.stringify(newUser));
+  }, [storageType, user]);
 
   useEffect(() => {
     const handler = () => logout();

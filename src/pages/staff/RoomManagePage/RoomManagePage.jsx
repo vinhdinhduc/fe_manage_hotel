@@ -3,6 +3,7 @@ import { FaCirclePlus } from 'react-icons/fa6';
 import roomService from '../../../services/room.service';
 import roomTypeService from '../../../services/roomType.service';
 import Table from '../../../components/common/Table/Table';
+import Pagination from '../../../components/common/Pagination/Pagination';
 import Button from '../../../components/common/Button/Button';
 import Modal from '../../../components/common/Modal/Modal';
 import Input from '../../../components/common/Input/Input';
@@ -13,6 +14,7 @@ import { pickArray, toArray } from '../../../utils/apiData';
 import { ROOM_STATUS, ROOM_STATUS_LABELS } from '../../../utils/constants';
 import { useAuth } from '../../../contexts/AuthContext';
 import useToast from '../../../hooks/useToast';
+import usePaginationQuery from '../../../hooks/usePaginationQuery';
 import './RoomManagePage.css';
 
 const EMPTY_FORM = { room_number: '', type_id: '', floor: '', status: 'Available', note: '' };
@@ -20,9 +22,11 @@ const EMPTY_FORM = { room_number: '', type_id: '', floor: '', status: 'Available
 const RoomManagePage = () => {
   const toast = useToast();
   const { isAdmin } = useAuth();
+  const { page, limit, setPage, setLimit } = usePaginationQuery(1, 10);
   const [rooms, setRooms] = useState([]);
   const [roomTypes, setRoomTypes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0, limit: 10 });
   const [modalOpen, setModalOpen] = useState(false);
   const [statusModalOpen, setStatusModalOpen] = useState(false);
   const [selected, setSelected] = useState(null);
@@ -36,15 +40,31 @@ const RoomManagePage = () => {
   const load = async () => {
     setLoading(true);
     try {
-      const params = filterStatus ? { status: filterStatus } : {};
-      const [roomRes, typeRes] = await Promise.all([roomService.getAll(params), roomTypeService.getAll()]);
-      setRooms(toArray(roomRes?.data));
+      const params = {
+        page,
+        limit,
+        ...(filterStatus ? { status: filterStatus } : {}),
+      };
+      const [roomRes, typeRes] = await Promise.all([
+        roomService.getAll(params),
+        roomTypeService.getAll({ page: 1, limit: 1000 }),
+      ]);
+      const rows = toArray(roomRes?.data);
+      const apiPagination = roomRes?.pagination || {};
+
+      setRooms(rows);
       setRoomTypes(pickArray(typeRes?.data, ['roomTypes']));
+      setPagination({
+        page: Number(apiPagination.page || page),
+        totalPages: Number(apiPagination.totalPages || 1),
+        total: Number(apiPagination.total || rows.length),
+        limit: Number(apiPagination.limit || limit),
+      });
     } catch (err) { toast.error(err.message); }
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, [filterStatus]);
+  useEffect(() => { load(); }, [filterStatus, page, limit]);
 
   const openCreate = () => { setSelected(null); setForm(EMPTY_FORM); setModalOpen(true); };
   const openEdit = (room) => { setSelected(room); setForm({ room_number: room.room_number, type_id: room.type_id, floor: room.floor, status: room.status, note: room.note || '' }); setModalOpen(true); };
@@ -103,13 +123,21 @@ const RoomManagePage = () => {
         actions={<Button variant="primary" icon={<FaCirclePlus color="#ffffff" />} onClick={openCreate}>Thêm phòng</Button>} />
 
       <div className="room-manage-page__filters">
-        <button className={`bm-filter-btn ${!filterStatus ? 'bm-filter-btn--active' : ''}`} onClick={() => setFilterStatus('')}>Tất cả</button>
+        <button className={`bm-filter-btn ${!filterStatus ? 'bm-filter-btn--active' : ''}`} onClick={() => { setFilterStatus(''); setPage(1); }}>Tất cả</button>
         {Object.entries(ROOM_STATUS).map(([, v]) => (
-          <button key={v} className={`bm-filter-btn ${filterStatus === v ? 'bm-filter-btn--active' : ''}`} onClick={() => setFilterStatus(v)}>{ROOM_STATUS_LABELS[v]}</button>
+          <button key={v} className={`bm-filter-btn ${filterStatus === v ? 'bm-filter-btn--active' : ''}`} onClick={() => { setFilterStatus(v); setPage(1); }}>{ROOM_STATUS_LABELS[v]}</button>
         ))}
       </div>
 
       <Table columns={columns} data={rooms} loading={loading} emptyText="Chưa có phòng nào" />
+      <Pagination
+        page={pagination.page}
+        totalPages={pagination.totalPages}
+        total={pagination.total}
+        limit={pagination.limit}
+        onPageChange={setPage}
+        onLimitChange={setLimit}
+      />
 
       {/* Add/Edit Modal */}
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={selected ? 'Sửa thông tin phòng' : 'Thêm phòng mới'} size="sm"

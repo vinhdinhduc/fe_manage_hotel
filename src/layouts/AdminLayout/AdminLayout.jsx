@@ -4,23 +4,21 @@ import { useAuth } from '../../contexts/AuthContext';
 import reportService from '../../services/report.service';
 import authService from '../../services/auth.service';
 import userService from '../../services/user.service';
-import { formatCurrency } from '../../utils/formatters';
 import useToast from '../../hooks/useToast';
+import logoImage from '../../assets/logo.png';
 import Modal from '../../components/common/Modal/Modal';
 import Input from '../../components/common/Input/Input';
 import Button from '../../components/common/Button/Button';
 import {
   FaArrowRightFromBracket,
   FaBars,
+  FaArrowUpRightFromSquare,
   FaChartColumn,
   FaClipboardList,
   FaClock,
   FaCircleExclamation,
   FaBell,
   FaChevronDown,
-  FaChevronRight,
-  FaGlobe,
-  FaHotel,
   FaHouse,
   FaKey,
   FaMagnifyingGlass,
@@ -47,53 +45,47 @@ const navItems = [
     { to: '/admin/users', icon: <FaUser size={18} color="#94a3b8" />, label: 'Khách hàng' },
     { to: '/admin/reports', icon: <FaChartColumn size={18} color="#ef4444" />, label: 'Báo cáo' },
   ]},
+  { group: 'Hệ thống', items: [
+    { href: '/', icon: <FaArrowUpRightFromSquare size={16} color="#f8fafc" />, label: 'Xem trang chủ', newTab: true },
+  ]},
 ];
 
 const routeMeta = [
   {
     match: /^\/dashboard$/,
     title: 'Dashboard',
-    breadcrumb: ['Tổng quan', 'Dashboard'],
   },
   {
     match: /^\/manage\/bookings/,
     title: 'Quản lý đặt phòng',
-    breadcrumb: ['Nghiệp vụ', 'Đặt phòng'],
   },
   {
     match: /^\/manage\/check-in-out/,
     title: 'Check-in / Check-out',
-    breadcrumb: ['Nghiệp vụ', 'Check-in/Out'],
   },
   {
     match: /^\/manage\/rooms/,
     title: 'Quản lý phòng',
-    breadcrumb: ['Nghiệp vụ', 'Phòng'],
   },
   {
     match: /^\/manage\/room-types/,
     title: 'Quản lý loại phòng',
-    breadcrumb: ['Nghiệp vụ', 'Loại phòng'],
   },
   {
     match: /^\/manage\/services/,
     title: 'Quản lý dịch vụ',
-    breadcrumb: ['Nghiệp vụ', 'Dịch vụ'],
   },
   {
     match: /^\/admin\/employees/,
     title: 'Quản lý nhân viên',
-    breadcrumb: ['Quản trị', 'Nhân viên'],
   },
   {
     match: /^\/admin\/users/,
     title: 'Quản lý khách hàng',
-    breadcrumb: ['Quản trị', 'Khách hàng'],
   },
   {
     match: /^\/admin\/reports/,
     title: 'Báo cáo hệ thống',
-    breadcrumb: ['Quản trị', 'Báo cáo'],
   },
 ];
 
@@ -102,7 +94,6 @@ const resolveRouteMeta = (pathname) => {
   if (matched) return matched;
   return {
     title: 'Bảng điều khiển',
-    breadcrumb: ['Tổng quan'],
   };
 };
 
@@ -119,7 +110,6 @@ const AdminLayout = () => {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchText, setSearchText] = useState('');
-  const [stats, setStats] = useState(null);
   const [notificationData, setNotificationData] = useState(null);
   const [now, setNow] = useState(() => new Date());
   const [notifOpen, setNotifOpen] = useState(false);
@@ -147,68 +137,14 @@ const AdminLayout = () => {
   const quickLinks = useMemo(
     () => navItems
       .filter((group) => !group.roles || group.roles.includes(user?.role))
-      .flatMap((group) => group.items.map((item) => ({
-        to: item.to,
-        label: item.label,
-      }))),
+      .flatMap((group) => group.items
+        .filter((item) => item.to)
+        .map((item) => ({
+          to: item.to,
+          label: item.label,
+        }))),
     [user?.role],
   );
-
-  const rooms = stats?.rooms || {};
-  const today = stats?.today || {};
-  const pendingBookings = Number(stats?.pendingBookings || 0);
-  const monthRevenue = Number(stats?.monthRevenue || 0);
-  const occupancyRate = rooms.total > 0
-    ? Math.round((Number(rooms.occupied || 0) / Number(rooms.total || 1)) * 100)
-    : 0;
-
-  const headerStats = useMemo(() => {
-    if (isAdmin) {
-      return [
-        {
-          label: 'Công suất phòng',
-          value: `${occupancyRate}%`,
-          tone: occupancyRate >= 90 ? 'danger' : occupancyRate >= 75 ? 'warning' : 'success',
-        },
-        {
-          label: 'Doanh thu tháng',
-          value: formatCurrency(monthRevenue),
-          tone: 'info',
-        },
-        {
-          label: 'Booking chờ',
-          value: pendingBookings,
-          tone: pendingBookings > 0 ? 'warning' : 'neutral',
-        },
-      ];
-    }
-
-    return [
-      {
-        label: 'Check-in hôm nay',
-        value: Number(today.checkIns || 0),
-        tone: 'success',
-      },
-      {
-        label: 'Check-out hôm nay',
-        value: Number(today.checkOuts || 0),
-        tone: 'info',
-      },
-      {
-        label: 'Phòng trống',
-        value: Number(rooms.available || 0),
-        tone: 'neutral',
-      },
-    ];
-  }, [
-    isAdmin,
-    monthRevenue,
-    occupancyRate,
-    pendingBookings,
-    rooms.available,
-    today.checkIns,
-    today.checkOuts,
-  ]);
 
   const notifications = useMemo(
     () => Array.isArray(notificationData?.items) ? notificationData.items : [],
@@ -219,18 +155,9 @@ const AdminLayout = () => {
 
   useEffect(() => {
     const loadHeaderData = async () => {
-      const [statsResult, notificationsResult] = await Promise.allSettled([
-        reportService.dashboard(),
-        reportService.notifications(),
-      ]);
+      const notificationsResult = await reportService.notifications();
 
-      if (statsResult.status === 'fulfilled') {
-        setStats(statsResult.value?.data?.stats || null);
-      }
-
-      if (notificationsResult.status === 'fulfilled') {
-        setNotificationData(notificationsResult.value?.data?.notifications || null);
-      }
+      setNotificationData(notificationsResult?.data?.notifications || null);
     };
 
     loadHeaderData();
@@ -410,7 +337,9 @@ const AdminLayout = () => {
       {/* Sidebar */}
       <aside className="sidebar">
         <div className="sidebar__header">
-          <span className="sidebar__logo"><FaHotel size={24} color="#f5a623" /></span>
+          <span className="sidebar__logo">
+            <img src={logoImage} alt="Logo Khách Sạn Sơn La" />
+          </span>
           <div>
             <p className="sidebar__hotel">Khách Sạn Sơn La</p>
             <p className="sidebar__system">Hệ thống quản lý</p>
@@ -424,16 +353,30 @@ const AdminLayout = () => {
             .map(group => (
             <div key={group.group} className="sidebar__group">
               <p className="sidebar__group-label">{group.group}</p>
-              {group.items.map(item => (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  className={({ isActive }) => `sidebar__item ${isActive ? 'sidebar__item--active' : ''}`}
-                  onClick={() => setSidebarOpen(false)}
-                >
-                  <span className="sidebar__item-icon">{item.icon}</span>
-                  <span>{item.label}</span>
-                </NavLink>
+              {group.items.map((item) => (
+                item.to ? (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    className={({ isActive }) => `sidebar__item ${isActive ? 'sidebar__item--active' : ''}`}
+                    onClick={() => setSidebarOpen(false)}
+                  >
+                    <span className="sidebar__item-icon">{item.icon}</span>
+                    <span>{item.label}</span>
+                  </NavLink>
+                ) : (
+                  <a
+                    key={item.href}
+                    href={item.href}
+                    target={item.newTab ? '_blank' : undefined}
+                    rel={item.newTab ? 'noreferrer noopener' : undefined}
+                    className="sidebar__item"
+                    onClick={() => setSidebarOpen(false)}
+                  >
+                    <span className="sidebar__item-icon">{item.icon}</span>
+                    <span>{item.label}</span>
+                  </a>
+                )
               ))}
             </div>
           ))}
@@ -458,17 +401,8 @@ const AdminLayout = () => {
             <button className="admin-header__menu" onClick={() => setSidebarOpen(true)} aria-label="Mở menu"><FaBars /></button>
 
             <div className="admin-header__context">
-              <p className="admin-header__context-sub">Khách sạn Sơn La · {isAdmin ? 'Quản trị viên' : 'Lễ tân trực ca'}</p>
               <h1 className="admin-header__title">{currentRoute.title}</h1>
               <div className="admin-header__meta">
-                <span className="admin-header__breadcrumb">
-                  {currentRoute.breadcrumb.map((segment, index) => (
-                    <span key={`${segment}-${index}`}>
-                      {index > 0 && <FaChevronRight size={10} />}
-                      <span>{segment}</span>
-                    </span>
-                  ))}
-                </span>
                 <span className="admin-header__time"><FaClock /> {timeText} · {dateText}</span>
               </div>
             </div>
@@ -487,18 +421,7 @@ const AdminLayout = () => {
               <button type="submit">Đi</button>
             </form>
 
-            <div className="admin-header__kpis">
-              {headerStats.map((item) => (
-                <div key={item.label} className={`admin-kpi admin-kpi--${item.tone}`}>
-                  <span className="admin-kpi__label">{item.label}</span>
-                  <strong className="admin-kpi__value">{item.value}</strong>
-                </div>
-              ))}
-            </div>
-
             <div className="admin-header__right">
-              <NavLink to="/" className="admin-header__link"><FaGlobe /> Trang chủ</NavLink>
-
               <div className="admin-header__notif" ref={notifRef}>
                 <button
                   className="admin-header__notif-btn"
@@ -551,8 +474,6 @@ const AdminLayout = () => {
                   </div>
                 )}
               </div>
-
-              <button className="admin-header__logout-btn" onClick={handleLogout}>Đăng xuất</button>
             </div>
           </div>
         </header>

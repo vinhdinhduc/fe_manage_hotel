@@ -4,7 +4,8 @@
 .main-header { background: var(--color-primary); position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow-md); }
 .main-header__inner { max-width: 1200px; margin: 0 auto; padding: 0 24px; height: 66px; display: flex; align-items: center; gap: 24px; }
 .main-header__brand { display: flex; align-items: center; gap: 10px; text-decoration: none; flex-shrink: 0; }
-.main-header__brand-icon { font-size: 1.8rem; }
+.main-header__brand-icon { width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; }
+.main-header__brand-icon img { width: 100%; height: 100%; object-fit: contain; }
 .main-header__brand-name { font-family: var(--font-heading); color: var(--color-white); font-size: 1.1rem; font-weight: 700; }
 
 /* Nav */

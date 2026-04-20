@@ -2,9 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { FaArrowRight, FaCalendarDays, FaClipboardList, FaCommentDots, FaCircleCheck, FaClock, FaHourglassHalf, FaBan, FaBed, FaChevronDown, FaChevronUp, FaMoneyCheckDollar } from 'react-icons/fa6';
 import bookingService from '../../../services/booking.service';
 import Spinner from '../../../components/common/Spinner/Spinner';
+import Modal from '../../../components/common/Modal/Modal';
+import Button from '../../../components/common/Button/Button';
+import Pagination from '../../../components/common/Pagination/Pagination';
 import { BookingStatusBadge } from '../../../components/common/StatusBadge';
 import { formatCurrency, formatDate, formatDateTime, calcNights } from '../../../utils/formatters';
 import useToast from '../../../hooks/useToast';
+import usePaginationQuery from '../../../hooks/usePaginationQuery';
 import './MyBookingsPage.css';
 
 const BOOKING_STEPS = [
@@ -23,7 +27,7 @@ const STATUS_FILTERS = [
   { value: 'Cancelled', label: 'Đã hủy' },
 ];
 
-const PAGE_SIZE = 6;
+const DEFAULT_PAGE_SIZE = 6;
 
 const getProgressIndex = (status) => {
   const index = BOOKING_STEPS.findIndex((step) => step.status === status);
@@ -110,24 +114,27 @@ const normalizeBooking = (booking = {}) => {
 };
 
 const MyBookingsPage = () => {
+  const { page, limit, setPage, setLimit } = usePaginationQuery(1, DEFAULT_PAGE_SIZE);
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [statusFilter, setStatusFilter] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [expandedBookingId, setExpandedBookingId] = useState(null);
-  const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0, limit: PAGE_SIZE });
+  const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0, limit: DEFAULT_PAGE_SIZE });
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [cancelTargetBookingId, setCancelTargetBookingId] = useState(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelSubmitting, setCancelSubmitting] = useState(false);
   const toast = useToast();
 
-  const load = async ({ page = 1, append = false } = {}) => {
-    if (append) setLoadingMore(true);
-    else setLoading(true);
+  const load = async () => {
+    setLoading(true);
 
     try {
       const res = await bookingService.myBookings({
         page,
-        limit: PAGE_SIZE,
+        limit,
         status: statusFilter || undefined,
         from_date: fromDate || undefined,
         to_date: toDate || undefined,
@@ -138,26 +145,26 @@ const MyBookingsPage = () => {
           ? res.data
           : [];
       const normalized = bookingList.map(normalizeBooking);
-
-      setBookings((prev) => (append ? [...prev, ...normalized] : normalized));
+      setBookings(normalized);
 
       const apiPagination = res?.data?.pagination || {};
       setPagination({
         page: Number(apiPagination.page || page || 1),
         totalPages: Number(apiPagination.totalPages || 1),
         total: Number(apiPagination.total || normalized.length),
-        limit: Number(apiPagination.limit || PAGE_SIZE),
+        limit: Number(apiPagination.limit || limit),
       });
     } catch (err) { toast.error(err.message); }
-
-    if (append) setLoadingMore(false);
-    else setLoading(false);
+    setLoading(false);
   };
 
   useEffect(() => {
     setExpandedBookingId(null);
-    load({ page: 1, append: false });
   }, [statusFilter, fromDate, toDate]);
+
+  useEffect(() => {
+    load();
+  }, [statusFilter, fromDate, toDate, page, limit]);
 
   const sortedBookings = useMemo(
     () => [...bookings].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)),
@@ -179,26 +186,43 @@ const MyBookingsPage = () => {
     );
   }, [sortedBookings]);
 
-  const canLoadMore = pagination.page < pagination.totalPages;
-
-  const handleCancel = async (id) => {
-    if (!window.confirm('Bạn có chắc muốn hủy đặt phòng này?')) return;
-    try {
-      await bookingService.cancel(id);
-      toast.success('Đã hủy đặt phòng');
-      load({ page: 1, append: false });
-    } catch (err) { toast.error(err.message); }
+  const openCancelModal = (id) => {
+    setCancelTargetBookingId(id);
+    setCancelReason('');
+    setCancelModalOpen(true);
   };
 
-  const handleLoadMore = () => {
-    if (!canLoadMore || loadingMore) return;
-    load({ page: pagination.page + 1, append: true });
+  const closeCancelModal = () => {
+    setCancelModalOpen(false);
+    setCancelTargetBookingId(null);
+    setCancelReason('');
+  };
+
+  const handleCancel = async (event) => {
+    event.preventDefault();
+    if (!cancelTargetBookingId) return;
+
+    const reason = cancelReason.trim();
+    if (!reason) {
+      toast.error('Vui lòng nhập lý do hủy đặt phòng');
+      return;
+    }
+
+    setCancelSubmitting(true);
+    try {
+      await bookingService.cancel(cancelTargetBookingId, { cancel_reason: reason });
+      toast.success('Đã hủy đặt phòng');
+      closeCancelModal();
+      load();
+    } catch (err) { toast.error(err.message); }
+    setCancelSubmitting(false);
   };
 
   const resetFilters = () => {
     setStatusFilter('');
     setFromDate('');
     setToDate('');
+    setPage(1);
   };
 
   return (
@@ -235,7 +259,10 @@ const MyBookingsPage = () => {
                 key={item.value || 'all'}
                 type="button"
                 className={`status-tab ${statusFilter === item.value ? 'status-tab--active' : ''}`}
-                onClick={() => setStatusFilter(item.value)}
+                onClick={() => {
+                  setStatusFilter(item.value);
+                  setPage(1);
+                }}
               >
                 {item.label}
               </button>
@@ -245,11 +272,26 @@ const MyBookingsPage = () => {
           <div className="my-bookings-page__date-range">
             <label>
               <span><FaCalendarDays /> Từ ngày</span>
-              <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+              <input
+                type="date"
+                value={fromDate}
+                onChange={(e) => {
+                  setFromDate(e.target.value);
+                  setPage(1);
+                }}
+              />
             </label>
             <label>
               <span><FaCalendarDays /> Đến ngày</span>
-              <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} min={fromDate || undefined} />
+              <input
+                type="date"
+                value={toDate}
+                onChange={(e) => {
+                  setToDate(e.target.value);
+                  setPage(1);
+                }}
+                min={fromDate || undefined}
+              />
             </label>
             <button type="button" className="my-bookings-page__reset" onClick={resetFilters}>Xóa lọc</button>
           </div>
@@ -371,7 +413,7 @@ const MyBookingsPage = () => {
                   </button>
 
                   {b.status === 'Pending' && (
-                    <button className="booking-item__cancel-btn" onClick={() => handleCancel(b.id)}>Hủy đặt phòng</button>
+                    <button className="booking-item__cancel-btn" onClick={() => openCancelModal(b.id)}>Hủy đặt phòng</button>
                   )}
                 </div>
               </div>
@@ -379,14 +421,53 @@ const MyBookingsPage = () => {
           </div>
           <div className="my-bookings-page__bottom">
             <span className="my-bookings-page__pagination-note">Hiển thị {sortedBookings.length} / {pagination.total} booking</span>
-            {canLoadMore && (
-              <button type="button" className="my-bookings-page__load-more" onClick={handleLoadMore} disabled={loadingMore}>
-                {loadingMore ? 'Đang tải thêm...' : 'Tải thêm lịch sử'}
-              </button>
-            )}
+            <Pagination
+              page={pagination.page}
+              totalPages={pagination.totalPages}
+              total={pagination.total}
+              limit={pagination.limit}
+              onPageChange={setPage}
+              onLimitChange={setLimit}
+              limitOptions={[6, 12, 24, 48]}
+            />
           </div>
           </>
         )}
+
+        <Modal
+          isOpen={cancelModalOpen}
+          onClose={closeCancelModal}
+          title={`Hủy đặt phòng #${cancelTargetBookingId || ''}`}
+          size="sm"
+          footer={(
+            <>
+              <Button variant="secondary" onClick={closeCancelModal}>Đóng</Button>
+              <Button variant="danger" loading={cancelSubmitting} onClick={handleCancel}>Xác nhận hủy</Button>
+            </>
+          )}
+        >
+          <form onSubmit={handleCancel} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.02em' }}>
+              Lý do hủy *
+            </label>
+            <textarea
+              value={cancelReason}
+              onChange={(event) => setCancelReason(event.target.value)}
+              rows={4}
+              required
+              placeholder="Nhập lý do hủy để khách sạn hỗ trợ tốt hơn"
+              style={{
+                width: '100%',
+                padding: '10px 14px',
+                border: '1.5px solid var(--color-border)',
+                borderRadius: 'var(--radius-md)',
+                fontSize: '0.9rem',
+                resize: 'vertical',
+                fontFamily: 'var(--font-body)',
+              }}
+            />
+          </form>
+        </Modal>
       </div>
     </div>
   );

@@ -1,7 +1,8 @@
 import { Outlet, NavLink, Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
-import { FaArrowRightFromBracket, FaBars, FaChartColumn, FaHotel, FaUser } from 'react-icons/fa6';
+import { FaArrowRightFromBracket, FaBars, FaChartColumn, FaUser } from 'react-icons/fa6';
 import { useAuth } from '../../contexts/AuthContext';
+import logoImage from '../../assets/logo.png';
 import './MainLayout.css';
 
 const MainLayout = () => {
@@ -16,7 +17,9 @@ const MainLayout = () => {
       <header className="main-header">
         <div className="main-header__inner">
           <Link to="/" className="main-header__brand">
-            <span className="main-header__brand-icon"><FaHotel color="#f5a623" /></span>
+            <span className="main-header__brand-icon">
+              <img src={logoImage} alt="Logo Khách Sạn Sơn La" />
+            </span>
             <div>
               <span className="main-header__brand-name">Khách Sạn Sơn La</span>
             </div>
@@ -60,7 +63,7 @@ const MainLayout = () => {
 
       <footer className="main-footer">
         <div className="main-footer__inner">
-          <p className="main-footer__copy">© 2026 Khách Sạn Sơn La — Hệ thống quản lý khách sạn Đại học Tây Bắc</p>
+          <p className="main-footer__copy">© 2026 Khách Sạn Sơn La — Hệ thống quản lý khách sạn </p>
           <div className="main-footer__links">
             <Link to="/">Trang chủ</Link>
             <Link to="/rooms">Phòng</Link>

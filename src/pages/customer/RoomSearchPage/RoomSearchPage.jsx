@@ -10,6 +10,38 @@ import { pickArray } from '../../../utils/apiData';
 import { useAuth } from '../../../contexts/AuthContext';
 import './RoomSearchPage.css';
 
+const formatAmenities = (amenities) => {
+  if (!amenities) return '';
+
+  if (Array.isArray(amenities)) {
+    return amenities
+      .map((item) => String(item || '').trim())
+      .filter(Boolean)
+      .join(' • ');
+  }
+
+  if (typeof amenities === 'string') {
+    const normalized = amenities.trim();
+    if (!normalized) return '';
+
+    try {
+      const parsed = JSON.parse(normalized);
+      if (Array.isArray(parsed)) {
+        return parsed
+          .map((item) => String(item || '').trim())
+          .filter(Boolean)
+          .join(' • ');
+      }
+    } catch {
+      // Keep original string when not JSON.
+    }
+
+    return normalized.replace(/\s*,\s*/g, ' • ');
+  }
+
+  return '';
+};
+
 const RoomSearchPage = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -122,6 +154,7 @@ const RoomSearchPage = () => {
                 <div key={room.room_id || room.id} className="room-card">
                   {(() => {
                     const roomType = room.roomType || room.RoomType;
+                    const amenitiesText = formatAmenities(roomType?.amenities);
                     return (
                       <>
                   <div className="room-card__header">
@@ -134,8 +167,11 @@ const RoomSearchPage = () => {
                     <span><FaPeopleGroup color="#64748b" /> {roomType?.max_occupancy || 2} người</span>
                     <span><FaRulerCombined color="#64748b" /> {roomType?.area_sqm || '—'} m²</span>
                   </div>
-                  {roomType?.amenities && (
-                    <p className="room-card__amenities">{roomType.amenities.slice(0, 60)}{roomType.amenities.length > 60 ? '...' : ''}</p>
+                  {amenitiesText && (
+                    <p className="room-card__amenities">
+                      {amenitiesText.slice(0, 90)}
+                      {amenitiesText.length > 90 ? '...' : ''}
+                    </p>
                   )}
                   <div className="room-card__footer">
                     <div className="room-card__price">

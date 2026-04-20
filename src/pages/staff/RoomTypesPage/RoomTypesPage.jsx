@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { FaCirclePlus } from 'react-icons/fa6';
 import roomTypeService from '../../../services/roomType.service';
 import Table from '../../../components/common/Table/Table';
+import Pagination from '../../../components/common/Pagination/Pagination';
 import Button from '../../../components/common/Button/Button';
 import Modal from '../../../components/common/Modal/Modal';
 import Input from '../../../components/common/Input/Input';
@@ -10,6 +11,7 @@ import { pickArray } from '../../../utils/apiData';
 import { formatCurrency } from '../../../utils/formatters';
 import { useAuth } from '../../../contexts/AuthContext';
 import useToast from '../../../hooks/useToast';
+import usePaginationQuery from '../../../hooks/usePaginationQuery';
 
 const EMPTY = { type_name:'', base_price:'', max_occupancy:2, amenities:'', description:'' };
 
@@ -30,15 +32,33 @@ const normalizeAmenitiesForSubmit = (amenities) => {
 const RoomTypesPage = () => {
   const toast = useToast();
   const { isAdmin } = useAuth();
+  const { page, limit, setPage, setLimit } = usePaginationQuery(1, 10);
   const [types, setTypes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0, limit: 10 });
   const [modalOpen, setModalOpen] = useState(false);
   const [selected, setSelected] = useState(null);
   const [form, setForm] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
 
-  const load = async () => { setLoading(true); try { const r = await roomTypeService.getAll(); setTypes(pickArray(r?.data, ['roomTypes'])); } catch(e){toast.error(e.message);} setLoading(false); };
-  useEffect(()=>{load();},[]);
+  const load = async () => {
+    setLoading(true);
+    try {
+      const r = await roomTypeService.getAll({ page, limit });
+      const rows = pickArray(r?.data, ['roomTypes']);
+      const apiPagination = r?.data?.pagination || {};
+
+      setTypes(rows);
+      setPagination({
+        page: Number(apiPagination.page || page),
+        totalPages: Number(apiPagination.totalPages || 1),
+        total: Number(apiPagination.total || rows.length),
+        limit: Number(apiPagination.limit || limit),
+      });
+    } catch (e) { toast.error(e.message); }
+    setLoading(false);
+  };
+  useEffect(() => { load(); }, [page, limit]);
 
 
   const openCreate = () => { setSelected(null); setForm(EMPTY); setModalOpen(true); };
@@ -90,6 +110,14 @@ const RoomTypesPage = () => {
       <PageHeader title="Loại phòng" subtitle="Quản lý các loại phòng và giá"
         actions={<Button variant="primary" icon={<FaCirclePlus color="#ffffff" />} onClick={openCreate}>Thêm loại phòng</Button>} />
       <Table columns={columns} data={types} loading={loading} emptyText="Chưa có loại phòng nào" />
+      <Pagination
+        page={pagination.page}
+        totalPages={pagination.totalPages}
+        total={pagination.total}
+        limit={pagination.limit}
+        onPageChange={setPage}
+        onLimitChange={setLimit}
+      />
       <Modal isOpen={modalOpen} onClose={()=>setModalOpen(false)} title={selected?'Sửa loại phòng':'Thêm loại phòng mới'} size="md"
         footer={<><Button variant="secondary" onClick={()=>setModalOpen(false)}>Hủy</Button><Button variant="primary" loading={saving} onClick={handleSave}>Lưu</Button></>}>
         <form onSubmit={handleSave} style={{display:'flex',flexDirection:'column',gap:14}}>

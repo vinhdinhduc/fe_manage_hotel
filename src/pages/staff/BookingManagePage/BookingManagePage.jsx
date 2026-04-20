@@ -1,16 +1,21 @@
 import { useState, useEffect } from 'react';
 import { FaCirclePlus, FaClipboardList } from 'react-icons/fa6';
 import bookingService from '../../../services/booking.service';
+import bookingDetailService from '../../../services/bookingDetail.service';
+import paymentService from '../../../services/payment.service';
 import serviceService from '../../../services/service.service';
 import Table from '../../../components/common/Table/Table';
+import Pagination from '../../../components/common/Pagination/Pagination';
 import Button from '../../../components/common/Button/Button';
 import Modal from '../../../components/common/Modal/Modal';
 import Input from '../../../components/common/Input/Input';
 import PageHeader from '../../../components/common/PageHeader';
 import { BookingStatusBadge } from '../../../components/common/StatusBadge';
+import { useAuth } from '../../../contexts/AuthContext';
 import { formatDate, formatCurrency } from '../../../utils/formatters';
 import { BANK_TRANSFER_INFO, PAYMENT_METHODS } from '../../../utils/constants';
 import useToast from '../../../hooks/useToast';
+import usePaginationQuery from '../../../hooks/usePaginationQuery';
 import './BookingManagePage.css';
 
 const getNightCount = (checkInDate, checkOutDate) => {
@@ -81,11 +86,15 @@ const normalizeBooking = (booking = {}) => {
 
 const BookingManagePage = () => {
   const toast = useToast();
+  const { isAdmin } = useAuth();
+  const { page, limit, setPage, setLimit } = usePaginationQuery(1, 10);
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0, limit: 10 });
   const [filterStatus, setFilterStatus] = useState('');
   const [selected, setSelected] = useState(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [invoiceLoading, setInvoiceLoading] = useState(false);
   const [invoiceData, setInvoiceData] = useState(null);
@@ -94,7 +103,15 @@ const BookingManagePage = () => {
   const [services, setServices] = useState([]);
   const [checkoutForm, setCheckoutForm] = useState({ payment_method: 'Cash', note: '' });
   const [addServiceForm, setAddServiceForm] = useState({ service_id: '', quantity: 1, note: '' });
+  const [depositForm, setDepositForm] = useState({ amount: '', payment_method: 'Cash', note: '' });
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [serviceDeleteLoadingId, setServiceDeleteLoadingId] = useState(null);
   const [actLoading, setActLoading] = useState(false);
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [cancelTargetBooking, setCancelTargetBooking] = useState(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelSubmitting, setCancelSubmitting] = useState(false);
+  const [rowActionLoading, setRowActionLoading] = useState({ bookingId: null, action: null });
 
   const transferInfo = {
     bankName: invoiceData?.checkout_transfer?.bankName || BANK_TRANSFER_INFO.bankName,
@@ -106,22 +123,43 @@ const BookingManagePage = () => {
   };
 
   const isActiveService = (service) => service?.is_active ?? service?.is_available ?? true;
+  const getServiceDetailId = (detail) => detail?.detail_id ?? detail?.booking_detail_id ?? detail?.id ?? null;
+  const getPaymentId = (payment) => payment?.payment_id ?? payment?.id ?? null;
+  const canAddDeposit = ['Pending', 'Confirmed'].includes(selected?.status);
 
-  const load = async () => {
-    setLoading(true);
+  const getPaidAmount = (payments = []) => payments.reduce((sum, payment) => {
+    const amount = Number(payment?.amount) || 0;
+    if (payment?.payment_type === 'Refund' && payment?.payment_status === 'Completed') return sum - amount;
+    if (payment?.payment_status === 'Completed') return sum + amount;
+    return sum;
+  }, 0);
+
+  const load = async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     try {
-      const params = filterStatus ? { status: filterStatus } : {};
+      const params = {
+        page,
+        limit,
+        ...(filterStatus ? { status: filterStatus } : {}),
+      };
       const res = await bookingService.getAll(params);
       const bookingList = Array.isArray(res?.data) ? res.data : [];
       setBookings(bookingList.map(normalizeBooking));
+      const apiPagination = res?.pagination || {};
+      setPagination({
+        page: Number(apiPagination.page || page),
+        totalPages: Number(apiPagination.totalPages || 1),
+        total: Number(apiPagination.total || bookingList.length),
+        limit: Number(apiPagination.limit || limit),
+      });
     } catch (err) { toast.error(err.message); }
-    setLoading(false);
+    if (!silent) setLoading(false);
   };
 
-  useEffect(() => { load(); }, [filterStatus]);
+  useEffect(() => { load(); }, [filterStatus, page, limit]);
 
   useEffect(() => {
-    serviceService.getAll()
+    serviceService.getAll({ page: 1, limit: 1000 })
       .then((response) => {
         const serviceList = Array.isArray(response?.data)
           ? response.data
@@ -138,16 +176,79 @@ const BookingManagePage = () => {
       .catch(() => {});
   }, []);
 
+  const refreshSelectedBooking = async (bookingId, { showLoading = true } = {}) => {
+    if (!bookingId) return null;
+    if (showLoading) setDetailLoading(true);
+    try {
+      const response = await bookingService.getById(bookingId);
+      const detailedBooking = normalizeBooking(response?.data?.booking || {});
+      const balanceDue = Math.max(0, Number(detailedBooking.total_amount || 0) - getPaidAmount(detailedBooking.payments));
+      setSelected(detailedBooking);
+      setDepositForm((prev) => ({
+        ...prev,
+        amount: balanceDue > 0 ? String(Math.round(balanceDue)) : '',
+      }));
+      return detailedBooking;
+    } catch (err) {
+      toast.error(err.message);
+      return null;
+    } finally {
+      if (showLoading) setDetailLoading(false);
+    }
+  };
+
+  const openDetail = async (booking) => {
+    const normalizedBooking = normalizeBooking(booking);
+    setSelected(normalizedBooking);
+    setDepositForm({ amount: '', payment_method: 'Cash', note: '' });
+    setDetailOpen(true);
+    await refreshSelectedBooking(normalizedBooking.id);
+  };
+
   const handleAction = async (action, booking) => {
-    setActLoading(true);
+    if (action === 'cancel') {
+      setCancelTargetBooking(booking);
+      setCancelReason('');
+      setCancelModalOpen(true);
+      return;
+    }
+
+    setRowActionLoading({ bookingId: booking.id, action });
     try {
       if (action === 'confirm') await bookingService.confirm(booking.id);
       if (action === 'checkin') await bookingService.checkIn(booking.id);
-      if (action === 'cancel') { if (!window.confirm('Hủy đặt phòng này?')) { setActLoading(false); return; } await bookingService.cancel(booking.id); }
       toast.success('Thao tác thành công');
-      load();
+      await load({ silent: true });
     } catch (err) { toast.error(err.message); }
-    setActLoading(false);
+    setRowActionLoading({ bookingId: null, action: null });
+  };
+
+  const closeCancelModal = () => {
+    setCancelModalOpen(false);
+    setCancelTargetBooking(null);
+    setCancelReason('');
+  };
+
+  const handleSubmitCancel = async (event) => {
+    event.preventDefault();
+    if (!cancelTargetBooking?.id) return;
+
+    const reason = cancelReason.trim();
+    if (!reason) {
+      toast.error('Vui lòng nhập lý do hủy đặt phòng');
+      return;
+    }
+
+    setCancelSubmitting(true);
+    try {
+      await bookingService.cancel(cancelTargetBooking.id, { cancel_reason: reason });
+      toast.success('Hủy đặt phòng thành công');
+      closeCancelModal();
+      await load({ silent: true });
+    } catch (err) {
+      toast.error(err.message);
+    }
+    setCancelSubmitting(false);
   };
 
   const handleCheckout = async (e) => {
@@ -159,9 +260,88 @@ const BookingManagePage = () => {
       setCheckoutOpen(false);
       setInvoiceData(null);
       setInvoiceQrUrl('');
-      load();
+      await load();
     } catch (err) { toast.error(err.message); }
     setActLoading(false);
+  };
+
+  const handleCreateDeposit = async (event) => {
+    event.preventDefault();
+    if (!selected?.id) return;
+
+    const amount = Number(depositForm.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      toast.error('Số tiền đặt cọc phải lớn hơn 0');
+      return;
+    }
+
+    setPaymentLoading(true);
+    try {
+      await paymentService.deposit(selected.id, {
+        amount,
+        payment_method: depositForm.payment_method,
+        note: depositForm.note || undefined,
+      });
+      toast.success('Ghi nhận đặt cọc thành công');
+      setDepositForm((prev) => ({ ...prev, amount: '', note: '' }));
+      await Promise.all([
+        load(),
+        refreshSelectedBooking(selected.id, { showLoading: false }),
+      ]);
+    } catch (err) {
+      toast.error(err.message);
+    }
+    setPaymentLoading(false);
+  };
+
+  const handleRefund = async (payment) => {
+    if (!isAdmin) return;
+
+    const paymentId = getPaymentId(payment);
+    if (!paymentId) {
+      toast.error('Không xác định được giao dịch để hoàn tiền');
+      return;
+    }
+
+    if (!window.confirm(`Hoàn tiền cho giao dịch #${paymentId}?`)) return;
+
+    const note = window.prompt('Ghi chú hoàn tiền (không bắt buộc):', `Hoàn tiền cho giao dịch #${paymentId}`);
+    if (note === null) return;
+
+    setPaymentLoading(true);
+    try {
+      await paymentService.refund(paymentId, { note: note || undefined });
+      toast.success('Hoàn tiền thành công');
+      await Promise.all([
+        load(),
+        refreshSelectedBooking(selected?.id, { showLoading: false }),
+      ]);
+    } catch (err) {
+      toast.error(err.message);
+    }
+    setPaymentLoading(false);
+  };
+
+  const handleRemoveService = async (detail) => {
+    const detailId = getServiceDetailId(detail);
+    if (!detailId) {
+      toast.error('Không xác định được dịch vụ để xóa');
+      return;
+    }
+    if (!window.confirm('Bạn có chắc muốn xóa dịch vụ này khỏi booking?')) return;
+
+    setServiceDeleteLoadingId(detailId);
+    try {
+      await bookingDetailService.remove(detailId);
+      toast.success('Đã xóa dịch vụ khỏi booking');
+      await Promise.all([
+        load(),
+        refreshSelectedBooking(selected?.id, { showLoading: false }),
+      ]);
+    } catch (err) {
+      toast.error(err.message);
+    }
+    setServiceDeleteLoadingId(null);
   };
 
   const handlePrintInvoice = () => {
@@ -397,6 +577,10 @@ const BookingManagePage = () => {
       toast.success('Thêm dịch vụ thành công');
       setAddServiceOpen(false);
       setAddServiceForm({ service_id: '', quantity: 1, note: '' });
+      await Promise.all([
+        load(),
+        refreshSelectedBooking(selected?.id, { showLoading: false }),
+      ]);
     } catch (err) { toast.error(err.message); }
     setActLoading(false);
   };
@@ -414,14 +598,14 @@ const BookingManagePage = () => {
     { key: 'total_amount', title: 'Tổng tiền', render: (v) => Number(v) > 0 ? formatCurrency(v) : '—' },
     { key: 'actions', title: 'Hành động', render: (_, row) => (
       <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
-        <Button size="sm" variant="secondary" onClick={() => { setSelected(row); setDetailOpen(true); }}>Chi tiết</Button>
-        {row.status === 'Pending' && <Button size="sm" variant="primary" loading={actLoading} onClick={() => handleAction('confirm', row)}>Xác nhận</Button>}
-        {row.status === 'Confirmed' && <Button size="sm" variant="success" loading={actLoading} onClick={() => handleAction('checkin', row)}>Check-in</Button>}
+        <Button size="sm" variant="secondary" onClick={() => openDetail(row)}>Chi tiết</Button>
+        {row.status === 'Pending' && <Button size="sm" variant="primary" loading={rowActionLoading.bookingId === row.id && rowActionLoading.action === 'confirm'} onClick={() => handleAction('confirm', row)}>Xác nhận</Button>}
+        {row.status === 'Confirmed' && <Button size="sm" variant="success" loading={rowActionLoading.bookingId === row.id && rowActionLoading.action === 'checkin'} onClick={() => handleAction('checkin', row)}>Check-in</Button>}
         {row.status === 'Checked-in' && <>
           <Button size="sm" variant="accent" icon={<FaCirclePlus />} onClick={() => { setSelected(row); setAddServiceOpen(true); }}>Thêm DV</Button>
           <Button size="sm" variant="primary" onClick={() => openCheckoutInvoice(row)}>Check-out</Button>
         </>}
-        {['Pending','Confirmed'].includes(row.status) && <Button size="sm" variant="danger" loading={actLoading} onClick={() => handleAction('cancel', row)}>Hủy</Button>}
+        {['Pending','Confirmed'].includes(row.status) && <Button size="sm" variant="danger" onClick={() => handleAction('cancel', row)}>Hủy</Button>}
       </div>
     )},
   ];
@@ -436,7 +620,7 @@ const BookingManagePage = () => {
 
       <div className="booking-manage-page__filters">
         {STATUSES.map(s => (
-          <button key={s} className={`bm-filter-btn ${filterStatus === s ? 'bm-filter-btn--active' : ''}`} onClick={() => setFilterStatus(s)}>
+          <button key={s} className={`bm-filter-btn ${filterStatus === s ? 'bm-filter-btn--active' : ''}`} onClick={() => { setFilterStatus(s); setPage(1); }}>
             {STATUS_LABELS[s]}
           </button>
         ))}
@@ -444,12 +628,56 @@ const BookingManagePage = () => {
 
       <Table columns={columns} data={bookings} loading={loading} emptyText="Không có đặt phòng nào" />
 
+      <Pagination
+        page={pagination.page}
+        totalPages={pagination.totalPages}
+        total={pagination.total}
+        limit={pagination.limit}
+        onPageChange={setPage}
+        onLimitChange={setLimit}
+      />
+
+      <Modal
+        isOpen={cancelModalOpen}
+        onClose={closeCancelModal}
+        title={`Hủy đặt phòng #${cancelTargetBooking?.id || ''}`}
+        size="sm"
+        footer={
+          <>
+            <Button variant="secondary" onClick={closeCancelModal}>Đóng</Button>
+            <Button variant="danger" loading={cancelSubmitting} onClick={handleSubmitCancel}>Xác nhận hủy</Button>
+          </>
+        }
+      >
+        <form onSubmit={handleSubmitCancel} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.02em' }}>
+            Lý do hủy *
+          </label>
+          <textarea
+            value={cancelReason}
+            onChange={(event) => setCancelReason(event.target.value)}
+            rows={4}
+            required
+            placeholder="Nhập lý do hủy để gửi thông báo cho khách hàng"
+            style={{
+              width: '100%',
+              padding: '10px 14px',
+              border: '1.5px solid var(--color-border)',
+              borderRadius: 'var(--radius-md)',
+              fontSize: '0.9rem',
+              resize: 'vertical',
+              fontFamily: 'var(--font-body)',
+            }}
+          />
+        </form>
+      </Modal>
+
       {/* ── Detail Modal ──────────────────────────────────────── */}
       <Modal
         isOpen={detailOpen}
         onClose={() => setDetailOpen(false)}
         title={`Chi tiết đặt phòng #${selected?.id}`}
-        size="md"
+        size="lg"
         footer={
           <>
             <Button variant="secondary" onClick={() => setDetailOpen(false)}>Đóng</Button>
@@ -461,7 +689,12 @@ const BookingManagePage = () => {
           </>
         }
       >
-        {selected && (
+        {detailLoading ? (
+          <div className="inv-loading">
+            <div className="inv-loading__spinner" />
+            <span className="inv-loading__text">Đang tải chi tiết booking...</span>
+          </div>
+        ) : selected && (
           <div className="booking-detail">
             <div className="booking-detail__row"><span>Khách hàng</span><strong>{selected.User?.full_name}</strong></div>
             <div className="booking-detail__row"><span>Email</span><strong>{selected.User?.email}</strong></div>
@@ -475,6 +708,146 @@ const BookingManagePage = () => {
               <div className="booking-detail__row booking-detail__row--total">
                 <span>Tổng tiền</span><strong>{formatCurrency(selected.total_amount)}</strong>
               </div>
+            )}
+
+            <div className="booking-detail__row booking-detail__row--summary">
+              <span>Đã thanh toán (ròng)</span>
+              <strong>{formatCurrency(getPaidAmount(selected.payments))}</strong>
+            </div>
+            <div className="booking-detail__row booking-detail__row--summary">
+              <span>Còn phải thu</span>
+              <strong>{formatCurrency(Math.max(0, Number(selected.total_amount || 0) - getPaidAmount(selected.payments)))}</strong>
+            </div>
+
+            <section className="booking-detail__section">
+              <div className="booking-detail__section-header">
+                <h4>Dịch vụ đã thêm</h4>
+                <span>{Array.isArray(selected.details) ? selected.details.length : 0} mục</span>
+              </div>
+
+              {Array.isArray(selected.details) && selected.details.length > 0 ? (
+                <div className="booking-detail__list">
+                  {selected.details.map((detail) => {
+                    const detailId = getServiceDetailId(detail);
+                    const canRemoveService = selected.status === 'Checked-in' && !!detailId;
+
+                    return (
+                      <div key={detailId || `${detail.service_id}-${detail.used_at || ''}`} className="booking-detail__list-item">
+                        <div>
+                          <p className="booking-detail__list-title">{detail.service?.service_name || 'Dịch vụ'}</p>
+                          <p className="booking-detail__list-sub">SL: {detail.quantity || 0} · Đơn giá: {formatCurrency(detail.unit_price || 0)}</p>
+                        </div>
+                        <div className="booking-detail__list-actions">
+                          <strong>{formatCurrency(detail.total_price || 0)}</strong>
+                          {canRemoveService && (
+                            <Button
+                              size="sm"
+                              variant="danger"
+                              loading={serviceDeleteLoadingId === detailId}
+                              onClick={() => handleRemoveService(detail)}
+                            >
+                              Xóa
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="booking-detail__empty">Chưa có dịch vụ bổ sung.</p>
+              )}
+            </section>
+
+            <section className="booking-detail__section">
+              <div className="booking-detail__section-header">
+                <h4>Lịch sử thanh toán</h4>
+                <span>{Array.isArray(selected.payments) ? selected.payments.length : 0} giao dịch</span>
+              </div>
+
+              {Array.isArray(selected.payments) && selected.payments.length > 0 ? (
+                <div className="booking-detail__list">
+                  {selected.payments.map((payment) => {
+                    const paymentId = getPaymentId(payment);
+                    const canRefund = isAdmin && payment.payment_status === 'Completed' && payment.payment_type !== 'Refund';
+
+                    return (
+                      <div key={paymentId || `${payment.payment_type}-${payment.created_at || ''}`} className="booking-detail__list-item">
+                        <div>
+                          <p className="booking-detail__list-title">#{paymentId || '—'} · {payment.payment_type}</p>
+                          <p className="booking-detail__list-sub">
+                            {payment.payment_method} · {payment.payment_status}
+                            {payment.paid_at ? ` · ${formatDateTime(payment.paid_at)}` : ''}
+                          </p>
+                        </div>
+                        <div className="booking-detail__list-actions">
+                          <strong>{formatCurrency(payment.amount || 0)}</strong>
+                          {canRefund && (
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              loading={paymentLoading}
+                              onClick={() => handleRefund(payment)}
+                            >
+                              Hoàn tiền
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="booking-detail__empty">Chưa có giao dịch thanh toán.</p>
+              )}
+            </section>
+
+            {canAddDeposit && (
+              <section className="booking-detail__section">
+                <div className="booking-detail__section-header">
+                  <h4>Ghi nhận đặt cọc</h4>
+                  <span>Cho booking chờ xác nhận/đã xác nhận</span>
+                </div>
+
+                <form className="booking-detail__deposit-form" onSubmit={handleCreateDeposit}>
+                  <div className="booking-detail__deposit-grid">
+                    <Input
+                      label="Số tiền đặt cọc"
+                      name="deposit_amount"
+                      type="number"
+                      min="1"
+                      value={depositForm.amount}
+                      onChange={(event) => setDepositForm((prev) => ({ ...prev, amount: event.target.value }))}
+                      required
+                    />
+
+                    <div>
+                      <label className="booking-detail__field-label">Phương thức</label>
+                      <select
+                        className="booking-detail__field-select"
+                        value={depositForm.payment_method}
+                        onChange={(event) => setDepositForm((prev) => ({ ...prev, payment_method: event.target.value }))}
+                      >
+                        {PAYMENT_METHODS.map((method) => (
+                          <option key={method.value} value={method.value}>{method.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <Input
+                    label="Ghi chú"
+                    name="deposit_note"
+                    value={depositForm.note}
+                    onChange={(event) => setDepositForm((prev) => ({ ...prev, note: event.target.value }))}
+                    placeholder="Ví dụ: Khách đặt cọc giữ phòng"
+                  />
+
+                  <div className="booking-detail__deposit-actions">
+                    <Button type="submit" variant="primary" loading={paymentLoading}>Ghi nhận đặt cọc</Button>
+                  </div>
+                </form>
+              </section>
             )}
           </div>
         )}

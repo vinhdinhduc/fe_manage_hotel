@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { FaUserPlus } from 'react-icons/fa6';
 import employeeService from '../../../services/employee.service';
 import Table from '../../../components/common/Table/Table';
+import Pagination from '../../../components/common/Pagination/Pagination';
 import Button from '../../../components/common/Button/Button';
 import Modal from '../../../components/common/Modal/Modal';
 import Input from '../../../components/common/Input/Input';
@@ -9,6 +10,7 @@ import PageHeader from '../../../components/common/PageHeader';
 import Badge from '../../../components/common/Badge/Badge';
 import { toArray } from '../../../utils/apiData';
 import useToast from '../../../hooks/useToast';
+import usePaginationQuery from '../../../hooks/usePaginationQuery';
 
 const EMPTY = { full_name:'', email:'', phone:'', password:'', role:'receptionist', position:'Nhân viên lễ tân', department:'Lễ tân', hire_date:'', salary:'', shift:'Sáng' };
 
@@ -24,8 +26,10 @@ const normalizeEmployee = (employee = {}) => {
 
 const EmployeesPage = () => {
   const toast = useToast();
+  const { page, limit, setPage, setLimit } = usePaginationQuery(1, 10);
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0, limit: 10 });
   const [modalOpen, setModalOpen] = useState(false);
   const [selected, setSelected] = useState(null);
   const [form, setForm] = useState(EMPTY);
@@ -34,14 +38,23 @@ const EmployeesPage = () => {
   const load = async () => {
     setLoading(true);
     try {
-      const r = await employeeService.getAll();
-      setEmployees(toArray(r?.data).map(normalizeEmployee));
+      const r = await employeeService.getAll({ page, limit });
+      const rows = toArray(r?.data);
+      const apiPagination = r?.pagination || {};
+
+      setEmployees(rows.map(normalizeEmployee));
+      setPagination({
+        page: Number(apiPagination.page || page),
+        totalPages: Number(apiPagination.totalPages || 1),
+        total: Number(apiPagination.total || rows.length),
+        limit: Number(apiPagination.limit || limit),
+      });
     } catch (e) {
       toast.error(e.message);
     }
     setLoading(false);
   };
-  useEffect(()=>{load();},[]);
+  useEffect(() => { load(); }, [page, limit]);
 
   const openCreate = () => { setSelected(null); setForm(EMPTY); setModalOpen(true); };
   const openEdit = e => {
@@ -101,6 +114,14 @@ const EmployeesPage = () => {
       <PageHeader title="Quản lý nhân viên" subtitle="Thêm và quản lý tài khoản nhân viên"
         actions={<Button variant="primary" icon={<FaUserPlus color="#ffffff" />} onClick={openCreate}>Thêm nhân viên</Button>} />
       <Table columns={columns} data={employees} loading={loading} emptyText="Chưa có nhân viên nào" />
+      <Pagination
+        page={pagination.page}
+        totalPages={pagination.totalPages}
+        total={pagination.total}
+        limit={pagination.limit}
+        onPageChange={setPage}
+        onLimitChange={setLimit}
+      />
       <Modal isOpen={modalOpen} onClose={()=>setModalOpen(false)} title={selected?'Sửa thông tin nhân viên':'Thêm nhân viên mới'} size="lg"
         footer={<><Button variant="secondary" onClick={()=>setModalOpen(false)}>Hủy</Button><Button variant="primary" loading={saving} onClick={handleSave}>Lưu</Button></>}>
         <form onSubmit={handleSave} style={{display:'flex',flexDirection:'column',gap:14}}>

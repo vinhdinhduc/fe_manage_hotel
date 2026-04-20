@@ -14,6 +14,132 @@
 .booking-detail__row strong { color: var(--color-text); }
 .booking-detail__row--total { font-size: 1rem; padding-top: 14px; }
 .booking-detail__row--total strong { color: var(--color-accent-dark); font-size: 1.1rem; }
+.booking-detail__row--summary { padding: 8px 0; }
+
+.booking-detail__section {
+  margin-top: 14px;
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  background: var(--color-bg-alt);
+}
+
+.booking-detail__section-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.booking-detail__section-header h4 {
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--color-primary);
+}
+
+.booking-detail__section-header span {
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+}
+
+.booking-detail__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.booking-detail__list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  padding: 10px;
+}
+
+.booking-detail__list-title {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.booking-detail__list-sub {
+  margin: 3px 0 0;
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+}
+
+.booking-detail__list-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.booking-detail__list-actions strong {
+  color: var(--color-accent-dark);
+  font-size: 0.88rem;
+}
+
+.booking-detail__empty {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.84rem;
+}
+
+.booking-detail__deposit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.booking-detail__deposit-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.booking-detail__field-label {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin-bottom: 5px;
+}
+
+.booking-detail__field-select {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+}
+
+.booking-detail__deposit-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+@media (max-width: 768px) {
+  .booking-detail__list-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .booking-detail__list-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .booking-detail__deposit-grid {
+    grid-template-columns: 1fr;
+  }
+}
 
 /* ═══════════════════════════════════════════════════════════
    INVOICE MODAL — Premium Hotel Receipt Design

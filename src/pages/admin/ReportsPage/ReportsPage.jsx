@@ -8,6 +8,20 @@ import { pickArray, pickObject } from '../../../utils/apiData';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import './ReportsPage.css';
 
+const resolveServiceName = (service) => {
+  const name =
+    service?.service_name ||
+    service?.name ||
+    service?.service?.service_name ||
+    service?.service?.name ||
+    service?.['service.service_name'] ||
+    service?.['service.name'];
+
+  if (name) return name;
+  if (service?.service_id) return `Dịch vụ #${service.service_id}`;
+  return 'Dịch vụ không xác định';
+};
+
 const ReportsPage = () => {
   const today = new Date().toISOString().split('T')[0];
   const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
@@ -138,7 +152,7 @@ const ReportsPage = () => {
                   {topServices.map((s, i) => (
                     <div key={i} className="report-service-item">
                       <span className="report-service-item__rank">#{i+1}</span>
-                      <span className="report-service-item__name">{s.service_name || s.name}</span>
+                      <span className="report-service-item__name">{resolveServiceName(s)}</span>
                       <span className="report-service-item__count">{s.total_quantity || s.count || 0} lượt</span>
                       <span className="report-service-item__revenue">{formatCurrency(s.total_revenue || s.revenue || 0)}</span>
                     </div>
