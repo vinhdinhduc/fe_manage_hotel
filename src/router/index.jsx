@@ -18,6 +18,7 @@ import PaymentQrPage from '../pages/public/PaymentQrPage/PaymentQrPage';
 // Customer Pages
 import HomePage from '../pages/customer/HomePage/HomePage';
 import RoomSearchPage from '../pages/customer/RoomSearchPage/RoomSearchPage';
+import RoomDetailPage from '../pages/customer/RoomDetailPage/RoomDetailPage';
 import BookingPage from '../pages/customer/BookingPage/BookingPage';
 import MyBookingsPage from '../pages/customer/MyBookingsPage/MyBookingsPage';
 import ProfilePage from '../pages/customer/ProfilePage/ProfilePage';
@@ -77,6 +78,7 @@ const router = createBrowserRouter([
     children: [
       { path: '/', element: <HomePage /> },
       { path: '/rooms', element: <RoomSearchPage /> },
+      { path: '/rooms/:id', element: <RoomDetailPage /> },
       { path: '/rooms/:id/book', element: <ProtectedRoute roles={['customer','receptionist','admin']}><BookingPage /></ProtectedRoute> },
       { path: '/my-bookings', element: <ProtectedRoute roles={['customer']}><MyBookingsPage /></ProtectedRoute> },
       { path: '/profile', element: <ProtectedRoute><ProfilePage /></ProtectedRoute> },

@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { FaCircleInfo, FaHotel } from 'react-icons/fa6';
 import bookingService from '../../../services/booking.service';
+import roomService from '../../../services/room.service';
 import Button from '../../../components/common/Button/Button';
 import Input from '../../../components/common/Input/Input';
 import Card from '../../../components/common/Card';
+import Spinner from '../../../components/common/Spinner/Spinner';
 import useToast from '../../../hooks/useToast';
 import { formatCurrency, calcNights } from '../../../utils/formatters';
 import './BookingPage.css';
@@ -15,7 +17,9 @@ const BookingPage = () => {
   const { id } = useParams();
   const toast = useToast();
 
-  const { room, check_in_date, check_out_date, adults } = location.state || {};
+  const { room: stateRoom, check_in_date, check_out_date, adults } = location.state || {};
+  const [room, setRoom] = useState(stateRoom || null);
+  const [loadingRoom, setLoadingRoom] = useState(!stateRoom);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     check_in_date: check_in_date || '',
@@ -25,6 +29,35 @@ const BookingPage = () => {
     special_request: '',
   });
   const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    let mounted = true;
+    const loadRoom = async () => {
+      if (stateRoom) {
+        setRoom(stateRoom);
+        setLoadingRoom(false);
+        return;
+      }
+
+      setLoadingRoom(true);
+      try {
+        const response = await roomService.getById(id);
+        if (!mounted) return;
+        setRoom(response?.data?.room || null);
+      } catch (err) {
+        if (!mounted) return;
+        toast.error(err.message || 'Không tải được thông tin phòng');
+        setRoom(null);
+      }
+      if (mounted) setLoadingRoom(false);
+    };
+
+    loadRoom();
+    return () => {
+      mounted = false;
+    };
+  }, [id, stateRoom, toast]);
+
   const roomType = room?.roomType || room?.RoomType;
 
   const nights = calcNights(form.check_in_date, form.check_out_date);
@@ -59,6 +92,12 @@ const BookingPage = () => {
       setLoading(false);
     }
   };
+
+  if (loadingRoom) return (
+    <div className="booking-page__no-room">
+      <Spinner text="Đang tải thông tin phòng..." />
+    </div>
+  );
 
   if (!room) return (
     <div className="booking-page__no-room">

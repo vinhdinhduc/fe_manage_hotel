@@ -94,6 +94,11 @@ const RoomSearchPage = () => {
     });
   };
 
+  const handleViewDetail = (room) => {
+    const roomId = room?.room_id || room?.id;
+    navigate(`/rooms/${roomId}`);
+  };
+
   return (
     <div className="room-search-page">
       {/* Filter Bar */}
@@ -155,8 +160,19 @@ const RoomSearchPage = () => {
                   {(() => {
                     const roomType = room.roomType || room.RoomType;
                     const amenitiesText = formatAmenities(roomType?.amenities);
+                    const imageUrl = room?.image_url || roomType?.image_url || '';
                     return (
                       <>
+                  <div className="room-card__image-wrap">
+                    {imageUrl ? (
+                      <img src={imageUrl} alt={`Phòng ${room.room_number}`} className="room-card__image" />
+                    ) : (
+                      <div className="room-card__image room-card__image--placeholder">
+                        <FaHotel color="#6b7f9d" />
+                        <span>Chưa có ảnh</span>
+                      </div>
+                    )}
+                  </div>
                   <div className="room-card__header">
                     <div className="room-card__number">Phòng {room.room_number}</div>
                     <RoomStatusBadge status={room.status} />
@@ -178,10 +194,15 @@ const RoomSearchPage = () => {
                       <span className="room-card__price-amount">{formatCurrency(roomType?.base_price ?? roomType?.price_per_night)}</span>
                       <span className="room-card__price-unit">/đêm</span>
                     </div>
-                    <button className="room-card__book-btn" onClick={() => handleBook(room)}
-                      disabled={room.status !== 'Available'}>
-                      {room.status === 'Available' ? 'Đặt phòng' : 'Không khả dụng'}
-                    </button>
+                    <div className="room-card__actions">
+                      <button className="room-card__detail-btn" onClick={() => handleViewDetail(room)}>
+                        Xem chi tiết
+                      </button>
+                      <button className="room-card__book-btn" onClick={() => handleBook(room)}
+                        disabled={room.status !== 'Available'}>
+                        {room.status === 'Available' ? 'Đặt phòng' : 'Không khả dụng'}
+                      </button>
+                    </div>
                   </div>
                       </>
                     );

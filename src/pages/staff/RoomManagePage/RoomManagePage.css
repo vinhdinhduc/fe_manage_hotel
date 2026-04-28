@@ -2,6 +2,14 @@
 .bm-filter-btn { padding: 6px 14px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-full); font-size: 0.8rem; cursor: pointer; transition: all var(--transition-fast); color: var(--color-text-secondary); }
 .bm-filter-btn:hover { border-color: var(--color-primary); color: var(--color-primary); }
 .bm-filter-btn--active { background: var(--color-primary); border-color: var(--color-primary); color: white; }
+.room-manage-page__thumbnail { width: 72px; height: 48px; object-fit: cover; border-radius: var(--radius-sm); border: 1px solid var(--color-border); }
+.room-manage-page__thumbnail-empty { font-size: 0.78rem; color: var(--color-text-muted); }
+.room-manage-page__upload-box { display: flex; flex-direction: column; gap: 5px; }
+.room-manage-page__upload-label { font-size: 0.82rem; font-weight: 600; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.02em; }
+.room-manage-page__upload-input { width: 100%; padding: 8px 10px; border: 1.5px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); font-size: 0.86rem; }
+.room-manage-page__upload-hint { font-size: 0.75rem; color: var(--color-text-muted); }
+.room-manage-page__preview-wrap { margin-top: -4px; border-radius: var(--radius-md); border: 1px dashed var(--color-border); padding: 8px; background: var(--color-bg-alt); }
+.room-manage-page__preview { width: 100%; max-height: 180px; object-fit: cover; border-radius: var(--radius-sm); display: block; }
 .room-status-option { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border: 1.5px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer; transition: all var(--transition-fast); }
 .room-status-option--active { border-color: var(--color-primary); background: rgba(26,47,78,0.05); }
 .room-status-option input { accent-color: var(--color-primary); }

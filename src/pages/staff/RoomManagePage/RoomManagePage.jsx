@@ -17,7 +17,9 @@ import useToast from '../../../hooks/useToast';
 import usePaginationQuery from '../../../hooks/usePaginationQuery';
 import './RoomManagePage.css';
 
-const EMPTY_FORM = { room_number: '', type_id: '', floor: '', status: 'Available', note: '' };
+const EMPTY_FORM = { room_number: '', type_id: '', floor: '', status: 'Available', image_url: '', note: '' };
+
+const normalizeImageUrl = (value) => String(value || '').trim();
 
 const RoomManagePage = () => {
   const toast = useToast();
@@ -33,6 +35,8 @@ const RoomManagePage = () => {
   const [form, setForm] = useState(EMPTY_FORM);
   const [newStatus, setNewStatus] = useState('');
   const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [selectedImageName, setSelectedImageName] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
 
   const getRoomId = (room) => room?.room_id ?? room?.id;
@@ -66,21 +70,57 @@ const RoomManagePage = () => {
 
   useEffect(() => { load(); }, [filterStatus, page, limit]);
 
-  const openCreate = () => { setSelected(null); setForm(EMPTY_FORM); setModalOpen(true); };
-  const openEdit = (room) => { setSelected(room); setForm({ room_number: room.room_number, type_id: room.type_id, floor: room.floor, status: room.status, note: room.note || '' }); setModalOpen(true); };
+  const openCreate = () => { setSelected(null); setForm(EMPTY_FORM); setSelectedImageName(''); setModalOpen(true); };
+  const openEdit = (room) => { setSelected(room); setForm({ room_number: room.room_number, type_id: room.type_id, floor: room.floor, status: room.status, image_url: room.image_url || '', note: room.note || '' }); setSelectedImageName(''); setModalOpen(true); };
   const openStatus = (room) => { setSelected(room); setNewStatus(room.status); setStatusModalOpen(true); };
 
   const handleChange = (e) => setForm(f => ({ ...f, [e.target.name]: e.target.value }));
 
+  const handleImageFileChange = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!isAdmin) {
+      toast.error('Chỉ admin mới có quyền tải ảnh phòng.');
+      event.target.value = '';
+      return;
+    }
+
+    setUploadingImage(true);
+    try {
+      const response = await roomService.uploadImage(file);
+      const uploadedUrl = normalizeImageUrl(response?.data?.image_url);
+      if (!uploadedUrl) {
+        throw new Error('Không nhận được đường dẫn ảnh sau khi tải lên.');
+      }
+
+      setForm((prev) => ({ ...prev, image_url: uploadedUrl }));
+      setSelectedImageName(file.name);
+      toast.success('Tải ảnh lên thành công.');
+    } catch (err) {
+      toast.error(err.message);
+    }
+    setUploadingImage(false);
+    event.target.value = '';
+  };
+
   const handleSave = async (e) => {
     e.preventDefault();
     if (!form.room_number || !form.type_id || !form.floor) { toast.error('Vui lòng điền đầy đủ thông tin'); return; }
+    if (uploadingImage) { toast.error('Vui lòng chờ tải ảnh hoàn tất.'); return; }
     setSaving(true);
     try {
-      if (selected) await roomService.update(getRoomId(selected), form);
-      else await roomService.create(form);
+      const payload = {
+        ...form,
+        image_url: normalizeImageUrl(form.image_url) || null,
+      };
+
+      if (selected) await roomService.update(getRoomId(selected), payload);
+      else await roomService.create(payload);
       toast.success(selected ? 'Cập nhật phòng thành công' : 'Thêm phòng thành công');
-      setModalOpen(false); load();
+      setModalOpen(false);
+      setSelectedImageName('');
+      load();
     } catch (err) { toast.error(err.message); }
     setSaving(false);
   };
@@ -103,6 +143,15 @@ const RoomManagePage = () => {
 
   const columns = [
     { key: 'room_number', title: 'Số phòng', render: (v) => <strong>Phòng {v}</strong> },
+    {
+      key: 'image_url',
+      title: 'Ảnh phòng',
+      render: (v) => v ? (
+        <img src={v} alt="Ảnh phòng" className="room-manage-page__thumbnail" />
+      ) : (
+        <span className="room-manage-page__thumbnail-empty">Chưa có ảnh</span>
+      ),
+    },
     { key: 'roomType', title: 'Loại phòng', render: (v) => v?.type_name || '—' },
     { key: 'floor', title: 'Tầng', render: (v) => `Tầng ${v}` },
     { key: 'roomType', title: 'Giá/đêm', render: (v) => formatCurrency(v?.base_price) },
@@ -160,6 +209,44 @@ const RoomManagePage = () => {
               {Object.entries(ROOM_STATUS_LABELS).map(([v,l]) => <option key={v} value={v}>{l}</option>)}
             </select>
           </div>
+          <div className="room-manage-page__upload-box">
+            <label className="room-manage-page__upload-label">Ảnh phòng</label>
+            {isAdmin ? (
+              <>
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={handleImageFileChange}
+                  disabled={uploadingImage}
+                  className="room-manage-page__upload-input"
+                />
+                <p className="room-manage-page__upload-hint">
+                  Hỗ trợ JPG, PNG, WEBP (tối đa 5MB).
+                  {selectedImageName ? ` Đã chọn: ${selectedImageName}` : ''}
+                </p>
+              </>
+            ) : (
+              <p className="room-manage-page__upload-hint">Chỉ admin có quyền tải ảnh.</p>
+            )}
+          </div>
+          {form.image_url ? (
+            <div className="room-manage-page__preview-wrap">
+              <img src={form.image_url} alt="Xem trước ảnh phòng" className="room-manage-page__preview" />
+              {isAdmin ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setForm((prev) => ({ ...prev, image_url: '' }));
+                    setSelectedImageName('');
+                  }}
+                >
+                  Xóa ảnh
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
           <Input label="Ghi chú" name="note" value={form.note} onChange={handleChange} placeholder="Ghi chú thêm (tùy chọn)" />
         </form>
       </Modal>
