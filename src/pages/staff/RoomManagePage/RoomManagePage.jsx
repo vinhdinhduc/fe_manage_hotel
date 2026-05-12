@@ -11,6 +11,7 @@ import PageHeader from '../../../components/common/PageHeader';
 import { RoomStatusBadge } from '../../../components/common/StatusBadge';
 import { formatCurrency } from '../../../utils/formatters';
 import { pickArray, toArray } from '../../../utils/apiData';
+import { resolveImageUrl } from '../../../utils/imageUrl';
 import { ROOM_STATUS, ROOM_STATUS_LABELS } from '../../../utils/constants';
 import { useAuth } from '../../../contexts/AuthContext';
 import useToast from '../../../hooks/useToast';
@@ -146,11 +147,14 @@ const RoomManagePage = () => {
     {
       key: 'image_url',
       title: 'Ảnh phòng',
-      render: (v) => v ? (
-        <img src={v} alt="Ảnh phòng" className="room-manage-page__thumbnail" />
-      ) : (
-        <span className="room-manage-page__thumbnail-empty">Chưa có ảnh</span>
-      ),
+      render: (v) => {
+        const imageUrl = resolveImageUrl(v);
+        return imageUrl ? (
+          <img src={imageUrl} alt="Ảnh phòng" className="room-manage-page__thumbnail" />
+        ) : (
+          <span className="room-manage-page__thumbnail-empty">Chưa có ảnh</span>
+        );
+      },
     },
     { key: 'roomType', title: 'Loại phòng', render: (v) => v?.type_name || '—' },
     { key: 'floor', title: 'Tầng', render: (v) => `Tầng ${v}` },
@@ -231,7 +235,7 @@ const RoomManagePage = () => {
           </div>
           {form.image_url ? (
             <div className="room-manage-page__preview-wrap">
-              <img src={form.image_url} alt="Xem trước ảnh phòng" className="room-manage-page__preview" />
+              <img src={resolveImageUrl(form.image_url)} alt="Xem trước ảnh phòng" className="room-manage-page__preview" />
               {isAdmin ? (
                 <Button
                   type="button"

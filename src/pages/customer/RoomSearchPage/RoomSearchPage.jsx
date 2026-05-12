@@ -7,6 +7,7 @@ import Spinner from '../../../components/common/Spinner/Spinner';
 import { RoomStatusBadge } from '../../../components/common/StatusBadge';
 import { formatCurrency } from '../../../utils/formatters';
 import { pickArray } from '../../../utils/apiData';
+import { resolveImageUrl } from '../../../utils/imageUrl';
 import { useAuth } from '../../../contexts/AuthContext';
 import './RoomSearchPage.css';
 
@@ -160,7 +161,7 @@ const RoomSearchPage = () => {
                   {(() => {
                     const roomType = room.roomType || room.RoomType;
                     const amenitiesText = formatAmenities(roomType?.amenities);
-                    const imageUrl = room?.image_url || roomType?.image_url || '';
+                    const imageUrl = resolveImageUrl(room?.image_url || roomType?.image_url || '');
                     return (
                       <>
                   <div className="room-card__image-wrap">

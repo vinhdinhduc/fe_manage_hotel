@@ -6,6 +6,7 @@ import Spinner from '../../../components/common/Spinner/Spinner';
 import Button from '../../../components/common/Button/Button';
 import { RoomStatusBadge } from '../../../components/common/StatusBadge';
 import { formatCurrency } from '../../../utils/formatters';
+import { resolveImageUrl } from '../../../utils/imageUrl';
 import './RoomDetailPage.css';
 
 const formatAmenities = (amenities) => {
@@ -75,7 +76,7 @@ const RoomDetailPage = () => {
 
   const roomType = room?.roomType || room?.RoomType || null;
   const amenities = useMemo(() => formatAmenities(roomType?.amenities), [roomType?.amenities]);
-  const imageUrl = room?.image_url || roomType?.image_url || '';
+  const imageUrl = resolveImageUrl(room?.image_url || roomType?.image_url || '');
 
   const onBookNow = () => {
     navigate(`/rooms/${id}/book`, {
